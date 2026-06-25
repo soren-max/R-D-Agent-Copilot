@@ -3,45 +3,18 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
+import { PlanViewer } from "@/components/plan-viewer";
+import { ToolResultCard } from "@/components/tool-result-card";
+import { TraceViewer } from "@/components/trace-viewer";
 import { type ChatResponse, postChat } from "@/lib/api";
 
 const examples = ["什么是配置中心？", "为什么订单接口报500？"];
-
-function routeLabel(routeType: string | undefined) {
-  if (routeType === "simple_qa") {
-    return "简单问答";
-  }
-  if (routeType === "complex_troubleshooting") {
-    return "复杂排障";
-  }
-  return routeType || "未知类型";
-}
 
 function answerSourceLabel(source: string | undefined) {
   if (source === "llm") {
     return "DeepSeek 生成回答";
   }
   return "规则兜底回答";
-}
-
-function statusLabel(status: string | undefined) {
-  if (status === "success") {
-    return "成功";
-  }
-  if (status === "failed") {
-    return "失败";
-  }
-  if (status === "skipped") {
-    return "已跳过";
-  }
-  return status || "未知状态";
-}
-
-function summarize(text: string | undefined) {
-  if (!text) {
-    return "暂无结果摘要";
-  }
-  return text.length > 140 ? `${text.slice(0, 140)}...` : text;
 }
 
 export default function Home() {
@@ -157,55 +130,21 @@ export default function Home() {
               ) : null}
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-950">路由与计划摘要</h2>
-              <p className="mt-3 text-sm text-slate-700">
-                问题类型：{routeLabel(result.route?.type)}
-              </p>
-              <div className="mt-4 grid gap-3">
-                {result.plan?.steps?.map((step) => (
-                  <article
-                    key={step.id}
-                    className="rounded-md border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                      <span>步骤 {step.id}</span>
-                      <span>动作：{step.action}</span>
-                      <span>工具：{step.tool}</span>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-800">{step.description}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
+            <PlanViewer steps={result.plan?.steps} routeType={result.route?.type} />
 
             <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">工具结果摘要</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {result.tool_results?.map((toolResult, index) => (
-                  <article
+                  <ToolResultCard
                     key={`${toolResult.tool_name || toolResult.tool}-${index}`}
-                    className="rounded-md border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-semibold text-slate-950">
-                        {toolResult.tool_name || toolResult.tool || "unknown_tool"}
-                      </h3>
-                      <span className="rounded-full bg-white px-2 py-1 text-xs text-slate-600">
-                        {statusLabel(toolResult.status)}
-                      </span>
-                    </div>
-                    <dl className="mt-3 space-y-1 text-xs text-slate-600">
-                      <div>置信度：{toolResult.confidence}</div>
-                      <div>来源：{toolResult.source || "无"}</div>
-                    </dl>
-                    <p className="mt-3 text-sm leading-6 text-slate-800">
-                      {summarize(toolResult.result)}
-                    </p>
-                  </article>
+                    toolResult={toolResult}
+                  />
                 ))}
               </div>
             </section>
+
+            <TraceViewer trace={result.trace} routeType={result.route?.type} />
           </div>
         ) : null}
       </section>
