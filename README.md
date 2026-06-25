@@ -10,6 +10,12 @@ Status: Week1 backend Agent MVP completed
 
 Next milestone: Trace Viewer + Evaluation + API adapter abstraction
 
+## Week2 Frontend
+
+`apps/web` 是 Trace Viewer 前端工程，使用 Next.js、TypeScript 和 TailwindCSS。
+
+当前 PR 仅新增前端骨架，包含 Chat、Agent 执行结果和 Trace 执行链路的静态占位。后续会接入 `POST /chat` 和 Trace Viewer 展示，不在前端暴露 API Key。
+
 ## Week1 Milestone
 
 - Day1 Agent MVP：完成 `POST /chat`、Router、Planner、Executor、Tools、Trace、Response 的确定性闭环。
