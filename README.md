@@ -2,6 +2,67 @@
 
 研发排障智能助手 / Agent 系统 / 工具调用。
 
+## Current Status
+
+Current release target: v0.1.0
+
+Status: Week1 backend Agent MVP completed
+
+Next milestone: Trace Viewer + Evaluation + API adapter abstraction
+
+## Week2 Frontend
+
+`apps/web` 是 Trace Viewer 前端工程，使用 Next.js、TypeScript 和 TailwindCSS。
+
+当前 PR 仅新增前端骨架，包含 Chat、Agent 执行结果和 Trace 执行链路的静态占位。后续会接入 `POST /chat` 和 Trace Viewer 展示，不在前端暴露 API Key。
+
+## Week1 Milestone
+
+- Day1 Agent MVP：完成 `POST /chat`、Router、Planner、Executor、Tools、Trace、Response 的确定性闭环。
+- Day2 Local Tools：用本地样例数据实现日志、配置和 Git 变更工具。
+- Day3 Local RAG：基于 `data/docs/` 实现本地知识库检索。
+- Day4 LangGraph Execution Layer：把工具执行编排放入 Executor 内部的 LangGraph layer。
+- Day5 Conditional Execution / Retry / Fallback：支持条件工具执行、失败重试和工具 fallback。
+- Day6 DeepSeek Answer Synthesizer：DeepSeek 只用于最终中文回答生成，不控制 Router、Planner 或 Tool Selection。
+- Day7 Regression / Docs / Release Checklist：补齐第一周回归验收、架构文档和 demo 说明。
+
+## Quick Start
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。
+
+## API Demo
+
+简单问答：
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query":"什么是配置中心？"}'
+```
+
+复杂排障：
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query":"为什么订单接口报500？"}'
+```
+
+本地 demo 脚本：
+
+```bash
+python scripts/demo_week1.py
+```
+
+更多说明见 `docs/architecture.md` 和 `docs/week1-demo.md`。
+
 ## Day1 MVP
 
 Day1 只实现最小可运行 Agent 闭环：
@@ -91,6 +152,21 @@ DEEPSEEK_API_KEY=your_api_key_here
 ```
 
 默认 `LLM_ENABLED=false`，没有 API Key 时项目仍可运行。真实 API Key 不应写入代码或提交到仓库。
+
+## DeepSeek Answer Synthesizer
+
+DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
+
+LLM 默认关闭。开启方式是在 `.env` 中设置：
+
+```bash
+LLM_ENABLED=true
+DEEPSEEK_API_KEY=your_key_here
+```
+
+如果 LLM 关闭、API Key 缺失、网络异常或模型调用失败，`/chat` 会自动回退到 rule-based fallback answer，并在响应中返回 `answer_source=fallback`、`llm_used=false` 和对应 `llm_error`。测试不依赖真实 DeepSeek API。
+
+更多本地验收步骤见 `docs/day6-deepseek-demo.md`。
 
 ## Run
 

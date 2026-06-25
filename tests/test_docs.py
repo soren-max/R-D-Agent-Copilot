@@ -31,3 +31,52 @@ def test_day5_langgraph_demo_docs_and_script_exist():
         "部分工具查询失败",
     ]:
         assert required_text in doc
+
+
+def test_day6_env_example_contains_required_llm_config():
+    env_example = Path(".env.example").read_text(encoding="utf-8")
+
+    for required_text in [
+        "LLM_ENABLED=false",
+        "LLM_PROVIDER=deepseek",
+        "LLM_MODEL=deepseek-v4-flash",
+        "LLM_BASE_URL=https://api.deepseek.com",
+        "DEEPSEEK_API_KEY=",
+    ]:
+        assert required_text in env_example
+
+
+def test_readme_contains_deepseek_answer_synthesizer_section():
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    for required_text in [
+        "## DeepSeek Answer Synthesizer",
+        "DeepSeek API 当前只用于最终回答生成",
+        "默认关闭",
+        "fallback",
+        "Router",
+        "Planner",
+        "Tool Selection",
+    ]:
+        assert required_text in readme
+
+
+def test_day6_deepseek_demo_docs_and_script_exist():
+    doc_path = Path("docs/day6-deepseek-demo.md")
+    script_path = Path("scripts/demo_day6.py")
+
+    assert doc_path.exists()
+    assert script_path.exists()
+
+    doc = doc_path.read_text(encoding="utf-8")
+    for required_text in [
+        "DeepSeek 只用于 Answer Synthesizer",
+        "cp .env.example .env",
+        "Demo Case 1：LLM 关闭",
+        "Demo Case 2：LLM 开启",
+        "fallback 策略",
+        "answer_source = fallback",
+        "synthesizer.engine = deepseek",
+        "我没有让大模型直接控制整个 Agent 流程",
+    ]:
+        assert required_text in doc

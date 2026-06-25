@@ -120,7 +120,12 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
     assert set(["answer", "route", "plan", "tool_results", "trace"]).issubset(data)
     assert data["route"]["type"] == "simple_qa"
     assert [item["tool_name"] for item in data["tool_results"]] == ["rag_retriever"]
-    assert [step["stage"] for step in data["trace"]["steps"]] == ["router", "planner", "executor"]
+    assert [step["stage"] for step in data["trace"]["steps"]] == [
+        "router",
+        "planner",
+        "executor",
+        "synthesizer",
+    ]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"

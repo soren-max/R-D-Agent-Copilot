@@ -10,7 +10,7 @@ from __future__ import annotations
 from app.agent.executor import Executor
 from app.agent.planner import Planner
 from app.agent.router import IntentRouter
-from app.agent.synthesizer import Synthesizer
+from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 
@@ -41,12 +41,29 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     )
 
     # ── 4. Synthesizer ──
-    synthesizer = Synthesizer()
-    answer = synthesizer.synthesize(request.query, route_result, plan, tool_results)
+    tracer.start_stage("synthesizer")
+    trace_summary = tracer.snapshot().model_dump()
+    synthesizer = AnswerSynthesizer()
+    synthesis = synthesizer.synthesize(
+        request.query,
+        route_result,
+        plan,
+        tool_results,
+        trace_summary=trace_summary,
+    )
+    answer = synthesis["answer"]
+    tracer.end_synthesizer_stage(
+        answer_source=synthesis["answer_source"],
+        llm_used=synthesis["llm_used"],
+        llm_error=synthesis["llm_error"],
+    )
     tracer.set_final_answer(answer)
 
     return ChatResponse(
         answer=answer,
+        answer_source=synthesis["answer_source"],
+        llm_used=synthesis["llm_used"],
+        llm_error=synthesis["llm_error"],
         route=route_result,
         plan=plan,
         tool_results=tool_results,
