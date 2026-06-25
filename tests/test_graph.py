@@ -34,6 +34,12 @@ def test_complex_troubleshooting_plan_executes_all_tools():
         "git_tool",
         "rag_retriever",
     ]
+    assert [item["node"] for item in result["tool_results"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert all(item["status"] == "success" for item in result["tool_results"])
 
 
@@ -48,6 +54,7 @@ def test_simple_qa_plan_executes_only_rag_tool():
     })
 
     assert [item["tool_name"] for item in result["tool_results"]] == ["rag_retriever"]
+    assert [item["node"] for item in result["tool_results"]] == ["rag_tool_node"]
     assert result["tool_results"][0]["documents"]
 
 
@@ -75,3 +82,6 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
     assert data["route"]["type"] == "simple_qa"
     assert [item["tool_name"] for item in data["tool_results"]] == ["rag_retriever"]
     assert [step["stage"] for step in data["trace"]["steps"]] == ["router", "planner", "executor"]
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert executor_step["engine"] == "langgraph"
+    assert executor_step["graph_name"] == "tool_execution_graph"
