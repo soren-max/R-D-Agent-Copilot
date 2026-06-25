@@ -2,6 +2,14 @@
 
 研发排障智能助手 / Agent 系统 / 工具调用。
 
+## Current Status
+
+Current release target: v0.1.0
+
+Status: Week1 backend Agent MVP completed
+
+Next milestone: Trace Viewer + Evaluation + API adapter abstraction
+
 ## Week1 Milestone
 
 - Day1 Agent MVP：完成 `POST /chat`、Router、Planner、Executor、Tools、Trace、Response 的确定性闭环。
