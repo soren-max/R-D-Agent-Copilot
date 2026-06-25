@@ -52,11 +52,20 @@ class ToolCallRecord(BaseModel):
     result: str = ""
     confidence: float = 0.0
     source: str = ""
+    error: str = ""
     latency_ms: int = 0
-    status: str = "pending"  # pending | success | skipped | error
+    status: str = "pending"  # pending | success | skipped | failed
 
 
 # ── Trace ───────────────────────────────────────────────────────────
+
+class TraceToolCall(BaseModel):
+    """Trace 中记录的单个工具调用摘要。"""
+
+    tool_name: str
+    status: str
+    latency_ms: int = 0
+
 
 class TraceStep(BaseModel):
     """Trace 中的单个阶段记录。"""
@@ -64,7 +73,10 @@ class TraceStep(BaseModel):
     stage: str = Field(description="阶段名：router | planner | executor")
     output: str = Field(description="该阶段的摘要输出")
     latency_ms: int = Field(default=0, description="该阶段耗时（毫秒）")
-    tool_calls: list[str] = Field(default_factory=list, description="executor 阶段使用的工具列表")
+    tool_calls: list[TraceToolCall] = Field(
+        default_factory=list,
+        description="executor 阶段使用的工具调用摘要",
+    )
 
 
 class TraceData(BaseModel):

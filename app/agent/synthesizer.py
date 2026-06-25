@@ -49,6 +49,7 @@ class Synthesizer:
         config_result = ""
         git_result = ""
         has_error = False
+        has_failed_tool = any(record.status == "failed" for record in tool_results)
 
         for record in tool_results:
             if record.tool == "log_tool" and record.status == "success":
@@ -70,6 +71,9 @@ class Synthesizer:
             )
         else:
             paragraphs.append(f"针对「{query}」，以下是排查结果：")
+
+        if has_failed_tool:
+            paragraphs.append("部分工具查询失败，以下判断基于已成功返回的数据。")
 
         # 2. 证据
         if log_result:
