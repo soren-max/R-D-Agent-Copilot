@@ -24,10 +24,12 @@ def test_complex_troubleshooting_plan_executes_all_tools():
         "query": query,
         "plan": _plan_for(query),
         "tool_results": [],
+        "tool_calls": [],
+        "skipped_nodes": [],
         "errors": [],
     })
 
-    assert set(["query", "plan", "tool_results", "errors"]).issubset(result)
+    assert set(["query", "plan", "tool_results", "tool_calls", "skipped_nodes", "errors"]).issubset(result)
     assert [item["tool_name"] for item in result["tool_results"]] == [
         "log_tool",
         "config_tool",
@@ -40,6 +42,19 @@ def test_complex_troubleshooting_plan_executes_all_tools():
         "git_tool_node",
         "rag_tool_node",
     ]
+    assert [item["tool_name"] for item in result["tool_calls"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
+    assert [item["node"] for item in result["tool_calls"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
+    assert result["skipped_nodes"] == []
     assert all(item["status"] == "success" for item in result["tool_results"])
 
 
@@ -50,11 +65,31 @@ def test_simple_qa_plan_executes_only_rag_tool():
         "query": query,
         "plan": _plan_for(query),
         "tool_results": [],
+        "tool_calls": [],
+        "skipped_nodes": [],
         "errors": [],
     })
 
     assert [item["tool_name"] for item in result["tool_results"]] == ["rag_retriever"]
     assert [item["node"] for item in result["tool_results"]] == ["rag_tool_node"]
+    assert [item["tool_name"] for item in result["tool_calls"]] == ["rag_retriever"]
+    assert result["skipped_nodes"] == [
+        {
+            "node": "log_tool_node",
+            "tool_name": "log_tool",
+            "reason": "tool_not_in_plan",
+        },
+        {
+            "node": "config_tool_node",
+            "tool_name": "config_tool",
+            "reason": "tool_not_in_plan",
+        },
+        {
+            "node": "git_tool_node",
+            "tool_name": "git_tool",
+            "reason": "tool_not_in_plan",
+        },
+    ]
     assert result["tool_results"][0]["documents"]
 
 
@@ -64,13 +99,17 @@ def test_graph_output_shape_contains_required_fields():
         "query": query,
         "plan": _plan_for(query),
         "tool_results": [],
+        "tool_calls": [],
+        "skipped_nodes": [],
         "errors": [],
     })
 
-    assert set(["query", "plan", "tool_results", "errors"]).issubset(result)
+    assert set(["query", "plan", "tool_results", "tool_calls", "skipped_nodes", "errors"]).issubset(result)
     assert result["query"] == query
     assert isinstance(result["plan"], dict)
     assert isinstance(result["tool_results"], list)
+    assert isinstance(result["tool_calls"], list)
+    assert isinstance(result["skipped_nodes"], list)
     assert isinstance(result["errors"], list)
 
 
@@ -85,3 +124,8 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
+    assert [node["tool_name"] for node in executor_step["skipped_nodes"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+    ]

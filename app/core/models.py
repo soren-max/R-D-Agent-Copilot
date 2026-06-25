@@ -71,6 +71,14 @@ class TraceToolCall(BaseModel):
     source: str = ""
 
 
+class TraceSkippedNode(BaseModel):
+    """Trace 中记录的跳过工具节点摘要。"""
+
+    node: str
+    tool_name: str
+    reason: str
+
+
 class TraceStep(BaseModel):
     """Trace 中的单个阶段记录。"""
 
@@ -82,6 +90,10 @@ class TraceStep(BaseModel):
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",
+    )
+    skipped_nodes: list[TraceSkippedNode] = Field(
+        default_factory=list,
+        description="executor 阶段跳过的工具节点摘要",
     )
 
 

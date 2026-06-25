@@ -11,7 +11,7 @@ import time
 import uuid
 from typing import Any
 
-from app.core.models import ToolCallRecord, TraceData, TraceStep, TraceToolCall
+from app.core.models import ToolCallRecord, TraceData, TraceSkippedNode, TraceStep, TraceToolCall
 
 
 class Tracer:
@@ -32,6 +32,7 @@ class Tracer:
         stage: str,
         output: str = "",
         tool_calls: list[TraceToolCall] | None = None,
+        skipped_nodes: list[TraceSkippedNode] | None = None,
         engine: str = "",
         graph_name: str = "",
     ) -> None:
@@ -47,25 +48,35 @@ class Tracer:
             output=output,
             latency_ms=latency_ms,
             tool_calls=tool_calls or [],
+            skipped_nodes=skipped_nodes or [],
         ))
 
     def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
         """记录 executor 阶段，并保存每个工具调用的状态摘要。"""
-        tool_calls = [
-            TraceToolCall(
-                node=result.node,
-                tool_name=result.tool_name or result.tool,
-                status=result.status,
-                latency_ms=result.latency_ms,
-                source=result.source,
-            )
-            for result in tool_results
-            if result.tool != "none"
+        raw_tool_calls = getattr(tool_results, "tool_calls", [])
+        if raw_tool_calls:
+            tool_calls = [TraceToolCall(**tool_call) for tool_call in raw_tool_calls]
+        else:
+            tool_calls = [
+                TraceToolCall(
+                    node=result.node,
+                    tool_name=result.tool_name or result.tool,
+                    status=result.status,
+                    latency_ms=result.latency_ms,
+                    source=result.source,
+                )
+                for result in tool_results
+                if result.tool != "none"
+            ]
+        skipped_nodes = [
+            TraceSkippedNode(**skipped_node)
+            for skipped_node in getattr(tool_results, "skipped_nodes", [])
         ]
         self.end_stage(
             "executor",
             output=output,
             tool_calls=tool_calls,
+            skipped_nodes=skipped_nodes,
             engine="langgraph",
             graph_name="tool_execution_graph",
         )

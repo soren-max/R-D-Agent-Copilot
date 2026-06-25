@@ -88,6 +88,7 @@ def test_chat_api_returns_day1_acceptance_shape():
         set(["node", "tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
         for tool_call in executor_step["tool_calls"]
     )
+    assert executor_step["skipped_nodes"] == []
 
 
 def test_troubleshooting_pipeline_executes_tools_and_trace():
@@ -127,6 +128,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert all(call.status == "success" for call in executor_step.tool_calls)
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
     assert all(call.source.startswith("data/") for call in executor_step.tool_calls)
+    assert executor_step.skipped_nodes == []
     assert all(step.latency_ms >= 0 for step in resp.trace.steps)
 
 
@@ -254,6 +256,16 @@ def test_chat_simple_qa_uses_rag_retriever_and_trace():
     assert executor_step["tool_calls"][0]["tool_name"] == "rag_retriever"
     assert executor_step["tool_calls"][0]["status"] == "success"
     assert executor_step["tool_calls"][0]["source"].startswith("data/docs/")
+    assert [node["tool_name"] for node in executor_step["skipped_nodes"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+    ]
+    assert all(node["reason"] == "tool_not_in_plan" for node in executor_step["skipped_nodes"])
+    assert not any(
+        result["tool_name"] in {"log_tool", "config_tool", "git_tool"}
+        for result in data["tool_results"]
+    )
 
 
 def test_chat_complex_troubleshooting_includes_rag_evidence():
@@ -273,6 +285,21 @@ def test_chat_complex_troubleshooting_includes_rag_evidence():
     assert "工具证据" in data["answer"]
     assert "知识库补充" in data["answer"]
     assert "建议处理方式" in data["answer"]
+
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert [call["tool_name"] for call in executor_step["tool_calls"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
+    assert [call["node"] for call in executor_step["tool_calls"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
+    assert executor_step["skipped_nodes"] == []
 
 
 def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
