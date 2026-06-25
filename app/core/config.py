@@ -23,10 +23,11 @@ class LLMSettings:
     deepseek_api_key: str = field(default="", repr=False)
 
 
-def get_llm_settings() -> LLMSettings:
+def get_llm_settings(load_env: bool = True) -> LLMSettings:
     """Load LLM settings from environment variables and optional .env."""
 
-    load_dotenv()
+    if load_env:
+        load_dotenv()
     return LLMSettings(
         enabled=_parse_bool(os.getenv("LLM_ENABLED"), default=False),
         provider=os.getenv("LLM_PROVIDER", "deepseek"),
