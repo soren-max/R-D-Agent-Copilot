@@ -92,6 +92,21 @@ DEEPSEEK_API_KEY=your_api_key_here
 
 默认 `LLM_ENABLED=false`，没有 API Key 时项目仍可运行。真实 API Key 不应写入代码或提交到仓库。
 
+## DeepSeek Answer Synthesizer
+
+DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
+
+LLM 默认关闭。开启方式是在 `.env` 中设置：
+
+```bash
+LLM_ENABLED=true
+DEEPSEEK_API_KEY=your_key_here
+```
+
+如果 LLM 关闭、API Key 缺失、网络异常或模型调用失败，`/chat` 会自动回退到 rule-based fallback answer，并在响应中返回 `answer_source=fallback`、`llm_used=false` 和对应 `llm_error`。测试不依赖真实 DeepSeek API。
+
+更多本地验收步骤见 `docs/day6-deepseek-demo.md`。
+
 ## Run
 
 ```bash
