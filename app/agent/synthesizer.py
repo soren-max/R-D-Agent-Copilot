@@ -9,7 +9,108 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+from app.core.llm import LLMClient, LLMClientError, LLMDisabledError, MissingAPIKeyError
 from app.core.models import Plan, RouterResult, ToolCallRecord
+from app.core.prompt import ANSWER_SYSTEM_PROMPT, build_answer_user_prompt
+
+
+def _to_dict(value: Any) -> dict[str, Any]:
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return dict(value)
+
+
+def _tool_results_to_dicts(tool_results: list[ToolCallRecord] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        result.model_dump() if hasattr(result, "model_dump") else dict(result)
+        for result in tool_results
+    ]
+
+
+def _tool_results_to_records(
+    tool_results: list[ToolCallRecord] | list[dict[str, Any]],
+) -> list[ToolCallRecord]:
+    return [
+        result if isinstance(result, ToolCallRecord) else ToolCallRecord(**result)
+        for result in tool_results
+    ]
+
+
+def _llm_error_code(error: Exception) -> str:
+    if isinstance(error, LLMDisabledError):
+        return "llm_disabled"
+    if isinstance(error, MissingAPIKeyError):
+        return "missing_api_key"
+    if isinstance(error, LLMClientError):
+        return error.__class__.__name__
+    return error.__class__.__name__
+
+
+class AnswerSynthesizer:
+    """Final answer synthesizer with optional DeepSeek generation."""
+
+    def __init__(
+        self,
+        llm_client: LLMClient | None = None,
+        fallback_synthesizer: "Synthesizer | None" = None,
+    ) -> None:
+        self.llm_client = llm_client or LLMClient()
+        self.fallback_synthesizer = fallback_synthesizer or Synthesizer()
+
+    def synthesize(
+        self,
+        query: str,
+        route: RouterResult | dict[str, Any],
+        plan: Plan | dict[str, Any],
+        tool_results: list[ToolCallRecord] | list[dict[str, Any]],
+        use_llm: bool = True,
+        trace_summary: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        route_result = route if isinstance(route, RouterResult) else RouterResult(**route)
+        plan_result = plan if isinstance(plan, Plan) else Plan(**plan)
+        result_records = _tool_results_to_records(tool_results)
+        fallback_answer = self.fallback_synthesizer.synthesize(
+            query,
+            route_result,
+            plan_result,
+            result_records,
+        )
+
+        if not use_llm or not self.llm_client.is_enabled():
+            return {
+                "answer": fallback_answer,
+                "answer_source": "fallback",
+                "llm_used": False,
+                "llm_error": "llm_disabled",
+            }
+
+        try:
+            answer = self.llm_client.generate(
+                ANSWER_SYSTEM_PROMPT,
+                build_answer_user_prompt(
+                    query=query,
+                    route=_to_dict(route),
+                    plan=_to_dict(plan),
+                    tool_results=_tool_results_to_dicts(tool_results),
+                    trace_summary=trace_summary or {},
+                ),
+            )
+        except Exception as exc:
+            return {
+                "answer": fallback_answer,
+                "answer_source": "fallback",
+                "llm_used": False,
+                "llm_error": _llm_error_code(exc),
+            }
+
+        return {
+            "answer": answer,
+            "answer_source": "llm",
+            "llm_used": True,
+            "llm_error": None,
+        }
 
 
 class Synthesizer:
@@ -20,7 +121,7 @@ class Synthesizer:
         query: str,
         route_result: RouterResult,
         plan: Plan,
-        tool_results: list[ToolCallRecord],
+        tool_results: list[ToolCallRecord] | list[dict[str, Any]],
     ) -> str:
         if route_result.type == "simple_qa":
             return self._synthesize_simple_qa(query, tool_results)
@@ -28,7 +129,7 @@ class Synthesizer:
             return self._synthesize_troubleshooting(query, tool_results)
 
     def _synthesize_simple_qa(
-        self, query: str, tool_results: list[ToolCallRecord]
+        self, query: str, tool_results: list[ToolCallRecord] | list[dict[str, Any]]
     ) -> str:
         rag_result = next((r for r in tool_results if r.tool == "rag_retriever"), None)
         if rag_result and rag_result.documents:
@@ -57,7 +158,7 @@ class Synthesizer:
         )
 
     def _synthesize_troubleshooting(
-        self, query: str, tool_results: list[ToolCallRecord]
+        self, query: str, tool_results: list[ToolCallRecord] | list[dict[str, Any]]
     ) -> str:
         if not tool_results:
             return "暂未获取到工具执行结果，无法进行分析。"

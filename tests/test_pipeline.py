@@ -70,7 +70,18 @@ def test_chat_api_returns_day1_acceptance_shape():
 
     response = chat_endpoint(ChatRequest(query="为什么订单接口报500？"))
     data = response.model_dump()
-    assert set(["answer", "route", "plan", "tool_results", "trace"]).issubset(data)
+    assert set([
+        "answer",
+        "answer_source",
+        "llm_used",
+        "llm_error",
+        "route",
+        "plan",
+        "tool_results",
+        "trace",
+    ]).issubset(data)
+    assert data["answer_source"] == "fallback"
+    assert data["llm_used"] is False
     assert data["route"]["type"] == "complex_troubleshooting"
     assert data["plan"]["plan_type"] == "troubleshooting_plan"
     assert len(data["tool_results"]) == 4
@@ -80,7 +91,7 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert data["trace"]["final_answer"] == data["answer"]
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
-    assert trace_stages == ["router", "planner", "executor"]
+    assert trace_stages == ["router", "planner", "executor", "synthesizer"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
@@ -109,7 +120,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert any("\u4e00" <= c <= "\u9fff" for c in resp.answer)
 
     trace_stages = [s.stage for s in resp.trace.steps]
-    assert trace_stages == ["router", "planner", "executor"]
+    assert trace_stages == ["router", "planner", "executor", "synthesizer"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
     assert executor_step.engine == "langgraph"
     assert executor_step.graph_name == "tool_execution_graph"
@@ -129,6 +140,9 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
     assert all(call.source.startswith("data/") for call in executor_step.tool_calls)
     assert executor_step.skipped_nodes == []
+    synthesizer_step = [s for s in resp.trace.steps if s.stage == "synthesizer"][0]
+    assert synthesizer_step.engine == "fallback"
+    assert synthesizer_step.llm_used is False
     assert all(step.latency_ms >= 0 for step in resp.trace.steps)
 
 

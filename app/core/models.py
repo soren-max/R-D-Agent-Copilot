@@ -85,11 +85,13 @@ class TraceSkippedNode(BaseModel):
 class TraceStep(BaseModel):
     """Trace 中的单个阶段记录。"""
 
-    stage: str = Field(description="阶段名：router | planner | executor")
+    stage: str = Field(description="阶段名：router | planner | executor | synthesizer")
     engine: str = Field(default="", description="执行引擎，如 langgraph")
     graph_name: str = Field(default="", description="执行图名称")
     output: str = Field(description="该阶段的摘要输出")
     latency_ms: int = Field(default=0, description="该阶段耗时（毫秒）")
+    llm_used: bool = Field(default=False, description="synthesizer 阶段是否使用 LLM")
+    llm_error: str = Field(default="", description="synthesizer 阶段的 LLM 错误")
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",
@@ -124,6 +126,9 @@ class ChatResponse(BaseModel):
     """聊天响应。"""
 
     answer: str = Field(description="最终回答（中文）")
+    answer_source: str = Field(default="fallback", description="答案来源：llm | fallback")
+    llm_used: bool = Field(default=False, description="是否使用 LLM 生成最终答案")
+    llm_error: str | None = Field(default=None, description="LLM 不可用或失败原因")
     route: RouterResult = Field(description="Router 分类结果")
     plan: Plan = Field(description="Planner 生成计划")
     tool_results: list[ToolCallRecord] = Field(
