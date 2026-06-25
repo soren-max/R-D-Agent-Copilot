@@ -71,7 +71,9 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
         next_state["tool_results"].append({
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "tool": tool_name,
             "tool_name": output.get("tool_name", tool_name),
+            "description": step.get("description", ""),
             "status": "failed" if error else "success",
             "result": output.get("result", ""),
             "confidence": output.get("confidence", 0.0),
@@ -88,7 +90,9 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
         next_state["tool_results"].append({
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "tool": tool_name,
             "tool_name": tool_name,
+            "description": step.get("description", ""),
             "status": "failed",
             "result": "",
             "confidence": 0.0,

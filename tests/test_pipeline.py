@@ -1,3 +1,4 @@
+import app.agent.executor as executor_module
 from app.agent.executor import Executor
 from app.agent.pipeline import run_pipeline
 from app.agent.planner import Planner
@@ -138,16 +139,28 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
 
 
 def test_executor_returns_failed_status_for_tool_errors():
-    class FailingTool:
-        name = "log_tool"
-
-        def run(self, query):
+    class FailingGraph:
+        def invoke(self, state):
             return {
-                "tool_name": "log_tool",
-                "result": "",
-                "confidence": 0.0,
-                "source": "data/logs/order-service.log",
-                "error": "file_not_found",
+                "query": state["query"],
+                "plan": state["plan"],
+                "tool_results": [
+                    {
+                        "step_id": 1,
+                        "action": "query_logs",
+                        "tool": "log_tool",
+                        "tool_name": "log_tool",
+                        "description": "查询日志",
+                        "status": "failed",
+                        "result": "",
+                        "confidence": 0.0,
+                        "source": "data/logs/order-service.log",
+                        "documents": [],
+                        "error": "file_not_found",
+                        "latency_ms": 5,
+                    }
+                ],
+                "errors": ["log_tool:file_not_found"],
             }
 
     plan = Plan(
@@ -162,7 +175,7 @@ def test_executor_returns_failed_status_for_tool_errors():
         ],
     )
     executor = Executor()
-    executor._tools["log_tool"] = FailingTool()
+    executor._graph = FailingGraph()
 
     result = executor.execute("订单报错", plan)[0]
 
@@ -171,7 +184,7 @@ def test_executor_returns_failed_status_for_tool_errors():
     assert result.confidence == 0.0
     assert result.source == "data/logs/order-service.log"
     assert result.error == "file_not_found"
-    assert result.latency_ms >= 0
+    assert result.latency_ms == 5
 
 
 def test_synthesizer_mentions_partial_tool_failure():
@@ -235,26 +248,31 @@ def test_chat_complex_troubleshooting_includes_rag_evidence():
 
 
 def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
-    class NoMatchRetrieverTool:
-        name = "rag_retriever"
-
-        def run(self, query):
+    class NoMatchGraph:
+        def invoke(self, state):
             return {
-                "tool_name": "rag_retriever",
-                "result": "知识库中未检索到直接相关内容。",
-                "confidence": 0.0,
-                "source": "data/docs",
-                "documents": [],
-                "error": "no_relevant_documents",
+                "query": state["query"],
+                "plan": state["plan"],
+                "tool_results": [
+                    {
+                        "step_id": 1,
+                        "action": "retrieve_knowledge",
+                        "tool": "rag_retriever",
+                        "tool_name": "rag_retriever",
+                        "description": "从本地知识库检索相关说明",
+                        "status": "failed",
+                        "result": "知识库中未检索到直接相关内容。",
+                        "confidence": 0.0,
+                        "source": "data/docs",
+                        "documents": [],
+                        "error": "no_relevant_documents",
+                        "latency_ms": 3,
+                    }
+                ],
+                "errors": ["rag_retriever:no_relevant_documents"],
             }
 
-    original_init = Executor.__init__
-
-    def patched_init(self):
-        original_init(self)
-        self._tools["rag_retriever"] = NoMatchRetrieverTool()
-
-    monkeypatch.setattr(Executor, "__init__", patched_init)
+    monkeypatch.setattr(executor_module, "build_execution_graph", lambda: NoMatchGraph())
 
     response = chat_endpoint(ChatRequest(query="什么是量子缓存蓝图？"))
     data = response.model_dump()
