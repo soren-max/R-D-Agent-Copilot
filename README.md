@@ -94,6 +94,12 @@ Day2 提供一组确定性的本地排障样例数据，作为后续工具系统
 
 `data/docs/` 存放本地知识库样例文档，覆盖配置中心、服务日志、接口异常排查流程和订单服务 FAQ。Day3 会基于这些文档实现轻量 RAG 检索。当前文档仅用于模拟研发排障场景，不接入外部知识库或真实公司数据。
 
+## API Adapter Layer
+
+Adapter 层用于隔离真实系统 API 和本地 mock 数据来源，向后续工具改造提供统一的数据访问边界。当前实现 `LocalLogAdapter`、`LocalConfigAdapter` 和 `LocalGitAdapter` 骨架，分别对应日志平台、配置中心和 Git 平台数据源。
+
+当前 Adapter 仍只面向本地确定性 mock 数据，不调用真实外部 API，不参与 Agent 推理、Planner 输出修改、Trace 写入或最终回答生成。后续可在保持工具契约稳定的前提下替换为真实日志平台、配置中心和 Git 平台 API。
+
 ## LangGraph Execution Layer
 
 Router 和 Planner 仍由项目自定义实现。LangGraph 只用于 Executor 内部工具执行编排，不替代现有意图分类和任务规划。当前 graph 节点包括 `log_tool_node`、`config_tool_node`、`git_tool_node`、`rag_tool_node`。每个节点执行结果会进入 trace，方便后续 Trace Viewer 展示。
