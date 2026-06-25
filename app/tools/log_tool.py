@@ -1,70 +1,69 @@
 """
-日志查询工具 — 模拟系统日志搜索。
+日志查询工具 - 从本地确定性日志样例中检索排障线索。
 """
 
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
 
-_MOCK_ERROR_LOGS = [
-    {"level": "ERROR", "service": "order-service", "timestamp": "2025-06-24 10:23:01",
-     "message": "request failed, status=500, path=/api/orders, trace_id=mock-trace-001"},
-    {"level": "ERROR", "service": "order-service", "timestamp": "2025-06-24 10:23:00",
-     "message": "database connection timeout after 30s, trace_id=mock-trace-002"},
-    {"level": "ERROR", "service": "payment-service", "timestamp": "2025-06-24 10:22:55",
-     "message": "NullPointerException in processPayment(), line 142, trace_id=mock-trace-003"},
-    {"level": "ERROR", "service": "gateway", "timestamp": "2025-06-24 10:22:50",
-     "message": "upstream connect error, status=502, from=order-service, trace_id=mock-trace-004"},
-    {"level": "CRITICAL", "service": "cache-service", "timestamp": "2025-06-24 10:22:45",
-     "message": "Redis connection pool exhausted, max_connections=50, trace_id=mock-trace-005"},
-    {"level": "ERROR", "service": "notification-service", "timestamp": "2025-06-24 10:22:30",
-     "message": "message queue send failed, topic=order_notify, status=503, trace_id=mock-trace-008"},
-]
+LOG_SOURCE = "data/logs/order-service.log"
+LOG_FILE = Path(__file__).resolve().parents[2] / LOG_SOURCE
 
-_MOCK_NORMAL_LOGS = [
-    {"level": "INFO", "service": "order-service", "timestamp": "2025-06-24 10:23:05",
-     "message": "health check passed, status=200"},
-    {"level": "INFO", "service": "payment-service", "timestamp": "2025-06-24 10:23:03",
-     "message": "payment completed, order_id=ORD-20250624-001"},
+_MATCH_KEYWORDS = [
+    "500",
+    "报错",
+    "异常",
+    "timeout",
+    "超时",
+    "order",
+    "订单",
 ]
-
-_ERROR_KEYWORDS = ["500", "报错", "error", "异常", "exception", "timeout", "超时",
-                   "fail", "失败", "崩溃", "crash", "oom", "502", "503",
-                   "连不上", "挂", "慢", "卡"]
 
 
 class LogTool:
     name = "log_tool"
 
     def run(self, query: str, context: str | None = None) -> dict[str, Any]:
-        query_lower = query.lower()
-        matched_keywords = [kw for kw in _ERROR_KEYWORDS
-                           if re.search(re.escape(kw), query_lower)]
+        if not LOG_FILE.exists():
+            return self._file_not_found()
 
+        query_text = f"{query} {context or ''}".lower()
+        matched_keywords = [
+            keyword for keyword in _MATCH_KEYWORDS
+            if re.search(re.escape(keyword.lower()), query_text)
+        ]
+
+        lines = LOG_FILE.read_text(encoding="utf-8").splitlines()
         if matched_keywords:
-            relevant = [log for log in _MOCK_ERROR_LOGS
-                       if any(kw in log["message"].lower() for kw in matched_keywords)]
-            if not relevant:
-                relevant = _MOCK_ERROR_LOGS[:3]
-            lines = "\n".join(
-                f"[{e['level']:>8}] [{e['service']}] {e['timestamp']}  {e['message']}"
-                for e in relevant
-            )
-            return {
-                "tool_name": "log_tool",
-                "result": f"查询到 {len(relevant)} 条相关错误日志：\n匹配关键词：{', '.join(matched_keywords)}\n{lines}",
-                "confidence": round(min(0.65 + 0.08 * len(relevant), 0.95), 2),
-                "source": "mock",
-            }
+            relevant_lines = [
+                line for line in lines
+                if any(keyword.lower() in line.lower() for keyword in matched_keywords)
+            ]
         else:
-            lines = "\n".join(
-                f"[{e['level']:>8}] [{e['service']}] {e['timestamp']}  {e['message']}"
-                for e in _MOCK_NORMAL_LOGS[:3]
-            )
-            return {
-                "tool_name": "log_tool",
-                "result": f"未发现明显异常，最近日志如下：\n{lines}",
-                "confidence": 0.50,
-                "source": "mock",
-            }
+            relevant_lines = []
+
+        if not relevant_lines:
+            relevant_lines = lines[:3]
+            confidence = 0.55
+            summary = "未命中明确关键词，返回最近日志片段："
+        else:
+            confidence = 0.9
+            summary = f"命中关键词：{', '.join(matched_keywords)}。匹配到 {len(relevant_lines)} 条相关日志："
+
+        return {
+            "tool_name": self.name,
+            "result": summary + "\n" + "\n".join(relevant_lines[:5]),
+            "confidence": confidence,
+            "source": LOG_SOURCE,
+        }
+
+    def _file_not_found(self) -> dict[str, Any]:
+        return {
+            "tool_name": self.name,
+            "result": "",
+            "confidence": 0.0,
+            "source": LOG_SOURCE,
+            "error": "file_not_found",
+        }

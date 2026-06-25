@@ -1,0 +1,6 @@
+2026-06-24T10:15:21+08:00 INFO service=order-service trace_id=mock-trace-001 endpoint=/api/orders method=POST status=500 message="订单创建失败，调用 payment-service 超时"
+2026-06-24T10:15:22+08:00 ERROR service=order-service trace_id=mock-trace-001 dependency=payment-service error=timeout duration_ms=3100 message="支付预校验 timeout，订单接口返回 status=500"
+2026-06-24T10:15:23+08:00 WARN service=order-service trace_id=mock-trace-001 retry_count=3 message="订单重试次数已耗尽，准备返回业务异常"
+2026-06-24T10:16:04+08:00 INFO service=payment-service trace_id=mock-trace-001 endpoint=/api/payments/precheck status=504 message="上游网关等待 payment-service 响应超时"
+2026-06-24T10:18:47+08:00 INFO service=order-service trace_id=mock-trace-002 endpoint=/api/orders method=POST status=200 message="订单创建成功"
+2026-06-24T10:20:08+08:00 ERROR service=order-service trace_id=mock-trace-003 endpoint=/api/orders method=POST status=500 message="新支付流程异常，fallback 未命中"

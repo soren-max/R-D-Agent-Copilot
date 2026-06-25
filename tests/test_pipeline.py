@@ -1,8 +1,10 @@
+from app.agent.executor import Executor
 from app.agent.pipeline import run_pipeline
 from app.agent.planner import Planner
 from app.agent.router import IntentRouter
+from app.agent.synthesizer import Synthesizer
 from app.api.chat import chat_endpoint
-from app.core.models import ChatRequest
+from app.core.models import ChatRequest, Plan, PlanStep, ToolCallRecord
 from app.tools.config_tool import ConfigTool
 from app.tools.git_tool import GitTool
 from app.tools.log_tool import LogTool
@@ -41,7 +43,7 @@ def test_planner_complex_troubleshooting_generates_three_step_plan():
     assert [step.tool for step in plan.steps] == ["log_tool", "config_tool", "git_tool"]
 
 
-def test_mock_tools_can_be_called_individually():
+def test_local_data_tools_can_be_called_individually():
     tools = [LogTool(), ConfigTool(), GitTool()]
 
     for tool in tools:
@@ -49,7 +51,7 @@ def test_mock_tools_can_be_called_individually():
         assert result["tool_name"] == tool.name
         assert result["result"]
         assert 0 <= result["confidence"] <= 1
-        assert result["source"] == "mock"
+        assert result["source"].startswith("data/")
 
 
 def test_chat_api_returns_day1_acceptance_shape():
@@ -65,11 +67,18 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert data["route"]["type"] == "complex_troubleshooting"
     assert data["plan"]["plan_type"] == "troubleshooting_plan"
     assert len(data["tool_results"]) == 3
+    for result in data["tool_results"]:
+        assert set(["status", "latency_ms", "source"]).issubset(result)
     assert data["trace"]["trace_id"]
     assert data["trace"]["final_answer"] == data["answer"]
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
     assert trace_stages == ["router", "planner", "executor"]
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert all(
+        set(["tool_name", "status", "latency_ms"]).issubset(tool_call)
+        for tool_call in executor_step["tool_calls"]
+    )
 
 
 def test_troubleshooting_pipeline_executes_tools_and_trace():
@@ -80,14 +89,97 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert len(resp.tool_results) == 3
     assert [r.tool for r in resp.tool_results] == ["log_tool", "config_tool", "git_tool"]
     assert all(r.status == "success" for r in resp.tool_results)
-    assert all(r.source == "mock" for r in resp.tool_results)
+    assert all(r.latency_ms >= 0 for r in resp.tool_results)
+    assert all(r.source.startswith("data/") for r in resp.tool_results)
     assert any("\u4e00" <= c <= "\u9fff" for c in resp.answer)
 
     trace_stages = [s.stage for s in resp.trace.steps]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
-    assert executor_step.tool_calls == ["log_tool", "config_tool", "git_tool"]
+    assert [call.tool_name for call in executor_step.tool_calls] == ["log_tool", "config_tool", "git_tool"]
+    assert all(call.status == "success" for call in executor_step.tool_calls)
+    assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
     assert all(step.latency_ms >= 0 for step in resp.trace.steps)
+
+
+def test_executor_executes_three_tools_with_status_latency_and_source():
+    router_result = IntentRouter().route("为什么订单接口报500？")
+    plan = Planner().plan("为什么订单接口报500？", router_result)
+    results = Executor().execute("为什么订单接口报500？", plan)
+
+    assert len(results) == 3
+    assert [result.tool_name for result in results] == ["log_tool", "config_tool", "git_tool"]
+    assert all(result.status == "success" for result in results)
+    assert all(result.latency_ms >= 0 for result in results)
+    assert all(result.source.startswith("data/") for result in results)
+
+
+def test_executor_returns_failed_status_for_tool_errors():
+    class FailingTool:
+        name = "log_tool"
+
+        def run(self, query):
+            return {
+                "tool_name": "log_tool",
+                "result": "",
+                "confidence": 0.0,
+                "source": "data/logs/order-service.log",
+                "error": "file_not_found",
+            }
+
+    plan = Plan(
+        plan_type="troubleshooting_plan",
+        steps=[
+            PlanStep(
+                id=1,
+                action="query_logs",
+                tool="log_tool",
+                description="查询日志",
+            )
+        ],
+    )
+    executor = Executor()
+    executor._tools["log_tool"] = FailingTool()
+
+    result = executor.execute("订单报错", plan)[0]
+
+    assert result.status == "failed"
+    assert result.result == ""
+    assert result.confidence == 0.0
+    assert result.source == "data/logs/order-service.log"
+    assert result.error == "file_not_found"
+    assert result.latency_ms >= 0
+
+
+def test_synthesizer_mentions_partial_tool_failure():
+    answer = Synthesizer()._synthesize_troubleshooting(
+        "为什么订单接口报500？",
+        [
+            ToolCallRecord(
+                step_id=1,
+                action="query_logs",
+                tool="log_tool",
+                tool_name="log_tool",
+                description="查询日志",
+                status="failed",
+                source="data/logs/order-service.log",
+                error="file_not_found",
+            ),
+            ToolCallRecord(
+                step_id=2,
+                action="check_config",
+                tool="config_tool",
+                tool_name="config_tool",
+                description="检查配置",
+                status="success",
+                result="发现订单/支付相关配置差异：payment.timeout",
+                confidence=0.85,
+                source="data/configs/dev.json,data/configs/prod.json",
+            ),
+        ],
+    )
+
+    assert "部分工具查询失败，以下判断基于已成功返回的数据。" in answer
 
 
 def test_trace_id_unique():

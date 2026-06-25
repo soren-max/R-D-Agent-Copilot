@@ -1,0 +1,15 @@
+{
+  "environment": "prod",
+  "payment": {
+    "timeout": 3000,
+    "provider": "payment-service"
+  },
+  "order": {
+    "retry_count": 3,
+    "status_on_payment_timeout": 500
+  },
+  "feature": {
+    "enable_new_payment_flow": false,
+    "enable_order_fallback": true
+  }
+}

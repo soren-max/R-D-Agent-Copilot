@@ -1,0 +1,15 @@
+{
+  "environment": "dev",
+  "payment": {
+    "timeout": 5000,
+    "provider": "mock-payment"
+  },
+  "order": {
+    "retry_count": 1,
+    "status_on_payment_timeout": 500
+  },
+  "feature": {
+    "enable_new_payment_flow": true,
+    "enable_order_fallback": true
+  }
+}

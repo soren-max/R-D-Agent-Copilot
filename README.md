@@ -19,6 +19,16 @@ User -> Router -> Planner -> Executor -> Tools -> Trace -> Response
 
 Day1 不包含 LangGraph、RAG、真实 LLM、前端、数据库、Redis 或外部 API。
 
+## 本地样例数据说明
+
+Day2 提供一组确定性的本地排障样例数据，作为后续工具系统强化的数据来源：
+
+- `data/logs/order-service.log`：模拟订单接口 500、payment-service timeout、trace_id 和服务名等日志线索。
+- `data/configs/dev.json` / `data/configs/prod.json`：模拟不同环境配置差异，包括支付超时、订单重试次数和新支付流程开关。
+- `data/git/commits.json`：模拟最近提交记录，包含提交 ID、作者、变更文件、风险等级和中文友好的摘要。
+
+这些数据仅用于本地确定性排障演示，不接入真实外部 API、数据库、RAG 或 LLM。
+
 ## Run
 
 ```bash

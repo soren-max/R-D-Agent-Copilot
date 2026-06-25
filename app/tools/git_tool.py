@@ -1,42 +1,35 @@
 """
-Git 变更查询工具 — 模拟最近代码变更分析。
+Git 变更查询工具 - 从本地确定性提交样例中检索风险线索。
 """
 
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from typing import Any
 
-_MOCK_COMMITS = [
-    {"hash": "a1b2c3d", "author": "zhangsan", "timestamp": "2025-06-23 14:30:00",
-     "message": "fix: 修复订单超时未取消的 bug",
-     "files_changed": ["order-service/.../OrderService.java", "order-service/.../OrderTimeoutJob.java"],
-     "detail": "修改了订单超时取消逻辑，将 timeout 检查从 30s 调整为 60s。"},
-    {"hash": "d4e5f6g", "author": "lisi", "timestamp": "2025-06-22 09:15:00",
-     "message": "feat: 新增支付重试机制",
-     "files_changed": ["payment-service/.../PaymentRetryHandler.java", "payment-service/.../application.yml"],
-     "detail": "新增支付重试处理器，失败后最多重试 3 次，间隔 500ms。"},
-    {"hash": "h7i8j9k", "author": "wangwu", "timestamp": "2025-06-21 17:45:00",
-     "message": "refactor: 重构用户认证模块",
-     "files_changed": ["user-service/.../AuthFilter.java", "user-service/.../application.yml"],
-     "detail": "重构了 JWT 认证过滤器，将 token 有效期从 24h 缩短为 12h。"},
-    {"hash": "m0n1o2p", "author": "zhangsan", "timestamp": "2025-06-20 11:20:00",
-     "message": "fix: 修复数据库连接池泄漏问题",
-     "files_changed": ["common-lib/.../ConnectionPool.java"],
-     "detail": "修复了数据库连接未正确释放的问题，在 finally 块中补充了释放逻辑。"},
-    {"hash": "q3r4s5t", "author": "lisi", "timestamp": "2025-06-19 08:30:00",
-     "message": "feat: 新增订单自动取消功能",
-     "files_changed": ["order-service/.../OrderAutoCancelJob.java", "order-service/.../application.yml"],
-     "detail": "新增定时任务自动取消超时未支付订单。feature.order_auto_cancel 配置默认关闭。"},
+GIT_SOURCE = "data/git/commits.json"
+GIT_FILE = Path(__file__).resolve().parents[2] / GIT_SOURCE
+
+_RELEVANT_KEYWORDS = [
+    "order-service",
+    "order",
+    "订单",
+    "异常",
+    "error",
+    "payment",
+    "支付",
+    "timeout",
+    "超时",
+    "retry",
+    "重试",
 ]
 
-_COMMIT_KEYWORDS = {
-    "order": [0, 4], "订单": [0, 4], "payment": [1], "支付": [1],
-    "user": [2], "用户": [2], "auth": [2], "认证": [2], "token": [2],
-    "database": [3], "数据库": [3], "connection": [3], "连接": [3], "pool": [3],
-    "timeout": [0], "超时": [0, 4], "retry": [1], "重试": [1],
-    "cancel": [0, 4], "取消": [0, 4], "配置": [1, 4], "config": [1, 4],
-    "500": [0], "502": [0], "503": [0], "error": [0, 3], "异常": [0, 3],
+_RISK_WEIGHT = {
+    "high": 3,
+    "medium": 2,
+    "low": 1,
 }
 
 
@@ -44,31 +37,71 @@ class GitTool:
     name = "git_tool"
 
     def run(self, query: str, context: str | None = None) -> dict[str, Any]:
-        query_lower = query.lower()
-        if context:
-            query_lower += " " + context.lower()
+        if not GIT_FILE.exists():
+            return self._file_not_found()
 
-        matched_indices: set[int] = set()
-        for keyword, indices in _COMMIT_KEYWORDS.items():
-            if re.search(re.escape(keyword), query_lower):
-                matched_indices.update(indices)
+        commits = json.loads(GIT_FILE.read_text(encoding="utf-8"))
+        query_text = f"{query} {context or ''}".lower()
 
-        commits = [_MOCK_COMMITS[i] for i in sorted(matched_indices)] if matched_indices else _MOCK_COMMITS[:2]
+        ranked_commits = []
+        for index, commit in enumerate(commits):
+            searchable = self._searchable_text(commit)
+            relevance = self._relevance_score(searchable, query_text)
+            if relevance <= 0:
+                continue
+            risk_score = _RISK_WEIGHT.get(str(commit.get("risk_level", "")).lower(), 0)
+            ranked_commits.append((relevance, risk_score, index, commit))
 
-        if not commits:
-            return {"tool_name": "git_tool", "result": "未查询到相关提交记录。", "confidence": 0.50, "source": "mock"}
+        ranked_commits.sort(key=lambda item: (-item[0], -item[1], item[2]))
+        selected = [commit for _, _, _, commit in ranked_commits[:3]]
 
-        lines: list[str] = []
-        for c in commits:
-            lines.append(f"提交 {c['hash']}  by {c['author']}  at {c['timestamp']}")
-            lines.append(f"  信息: {c['message']}")
-            lines.append(f"  变更: {', '.join(c['files_changed'])}")
-            lines.append(f"  详情: {c['detail']}")
-            lines.append("")
+        if not selected:
+            result = "未发现与 order-service、异常处理或支付流程相关的近期提交。"
+            confidence = 0.55
+        else:
+            lines = []
+            for commit in selected:
+                changed_files = ", ".join(commit.get("changed_files", []))
+                lines.append(
+                    f"{commit.get('commit_id')} [{commit.get('risk_level')}] "
+                    f"{commit.get('message')} by {commit.get('author')}"
+                )
+                lines.append(f"  变更文件: {changed_files}")
+                lines.append(f"  说明: {commit.get('summary')}")
+            result = "最近相关提交风险摘要：\n" + "\n".join(lines)
+            confidence = 0.8
 
         return {
-            "tool_name": "git_tool",
-            "result": f"查询到 {len(commits)} 条相关提交记录：\n" + "\n".join(lines).strip(),
-            "confidence": 0.85 if len(commits) <= 3 else 0.70,
-            "source": "mock",
+            "tool_name": self.name,
+            "result": result,
+            "confidence": confidence,
+            "source": GIT_SOURCE,
         }
+
+    def _file_not_found(self) -> dict[str, Any]:
+        return {
+            "tool_name": self.name,
+            "result": "",
+            "confidence": 0.0,
+            "source": GIT_SOURCE,
+            "error": "file_not_found",
+        }
+
+    def _searchable_text(self, commit: dict[str, Any]) -> str:
+        values = [
+            str(commit.get("commit_id", "")),
+            str(commit.get("message", "")),
+            str(commit.get("risk_level", "")),
+            str(commit.get("summary", "")),
+            " ".join(commit.get("changed_files", [])),
+        ]
+        return " ".join(values).lower()
+
+    def _relevance_score(self, searchable: str, query_text: str) -> int:
+        score = 0
+        for keyword in _RELEVANT_KEYWORDS:
+            keyword_lower = keyword.lower()
+            if not re.search(re.escape(keyword_lower), searchable):
+                continue
+            score += 2 if re.search(re.escape(keyword_lower), query_text) else 1
+        return score
