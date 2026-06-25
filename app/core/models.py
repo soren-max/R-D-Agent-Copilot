@@ -52,6 +52,7 @@ class ToolCallRecord(BaseModel):
     result: str = ""
     confidence: float = 0.0
     source: str = ""
+    documents: list[dict[str, Any]] = Field(default_factory=list)
     error: str = ""
     latency_ms: int = 0
     status: str = "pending"  # pending | success | skipped | failed
@@ -65,6 +66,7 @@ class TraceToolCall(BaseModel):
     tool_name: str
     status: str
     latency_ms: int = 0
+    source: str = ""
 
 
 class TraceStep(BaseModel):

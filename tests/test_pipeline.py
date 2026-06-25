@@ -33,14 +33,20 @@ def test_planner_simple_qa_generates_single_step_plan():
 
     assert plan.plan_type == "simple_qa"
     assert len(plan.steps) == 1
+    assert plan.steps[0].tool == "rag_retriever"
 
 
-def test_planner_complex_troubleshooting_generates_three_step_plan():
+def test_planner_complex_troubleshooting_generates_tool_and_rag_plan():
     router_result = IntentRouter().route("为什么订单接口报500？")
     plan = Planner().plan("为什么订单接口报500？", router_result)
 
     assert plan.plan_type == "troubleshooting_plan"
-    assert [step.tool for step in plan.steps] == ["log_tool", "config_tool", "git_tool"]
+    assert [step.tool for step in plan.steps] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
 
 
 def test_local_data_tools_can_be_called_individually():
@@ -66,7 +72,7 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert set(["answer", "route", "plan", "tool_results", "trace"]).issubset(data)
     assert data["route"]["type"] == "complex_troubleshooting"
     assert data["plan"]["plan_type"] == "troubleshooting_plan"
-    assert len(data["tool_results"]) == 3
+    assert len(data["tool_results"]) == 4
     for result in data["tool_results"]:
         assert set(["status", "latency_ms", "source"]).issubset(result)
     assert data["trace"]["trace_id"]
@@ -76,7 +82,7 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert all(
-        set(["tool_name", "status", "latency_ms"]).issubset(tool_call)
+        set(["tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
         for tool_call in executor_step["tool_calls"]
     )
 
@@ -86,8 +92,13 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
 
     assert resp.route.type == "complex_troubleshooting"
     assert resp.plan.plan_type == "troubleshooting_plan"
-    assert len(resp.tool_results) == 3
-    assert [r.tool for r in resp.tool_results] == ["log_tool", "config_tool", "git_tool"]
+    assert len(resp.tool_results) == 4
+    assert [r.tool for r in resp.tool_results] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
     assert all(r.status == "success" for r in resp.tool_results)
     assert all(r.latency_ms >= 0 for r in resp.tool_results)
     assert all(r.source.startswith("data/") for r in resp.tool_results)
@@ -96,22 +107,34 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     trace_stages = [s.stage for s in resp.trace.steps]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
-    assert [call.tool_name for call in executor_step.tool_calls] == ["log_tool", "config_tool", "git_tool"]
+    assert [call.tool_name for call in executor_step.tool_calls] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
     assert all(call.status == "success" for call in executor_step.tool_calls)
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
+    assert all(call.source.startswith("data/") for call in executor_step.tool_calls)
     assert all(step.latency_ms >= 0 for step in resp.trace.steps)
 
 
-def test_executor_executes_three_tools_with_status_latency_and_source():
+def test_executor_executes_tools_and_rag_with_status_latency_and_source():
     router_result = IntentRouter().route("为什么订单接口报500？")
     plan = Planner().plan("为什么订单接口报500？", router_result)
     results = Executor().execute("为什么订单接口报500？", plan)
 
-    assert len(results) == 3
-    assert [result.tool_name for result in results] == ["log_tool", "config_tool", "git_tool"]
+    assert len(results) == 4
+    assert [result.tool_name for result in results] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
     assert all(result.status == "success" for result in results)
     assert all(result.latency_ms >= 0 for result in results)
     assert all(result.source.startswith("data/") for result in results)
+    assert results[-1].documents
 
 
 def test_executor_returns_failed_status_for_tool_errors():
@@ -180,6 +203,66 @@ def test_synthesizer_mentions_partial_tool_failure():
     )
 
     assert "部分工具查询失败，以下判断基于已成功返回的数据。" in answer
+
+
+def test_chat_simple_qa_uses_rag_retriever_and_trace():
+    response = chat_endpoint(ChatRequest(query="什么是配置中心？"))
+    data = response.model_dump()
+
+    assert data["route"]["type"] == "simple_qa"
+    assert [result["tool_name"] for result in data["tool_results"]] == ["rag_retriever"]
+    assert data["tool_results"][0]["documents"]
+    assert "配置中心" in data["answer"]
+    assert any("\u4e00" <= c <= "\u9fff" for c in data["answer"])
+
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert executor_step["tool_calls"][0]["tool_name"] == "rag_retriever"
+    assert executor_step["tool_calls"][0]["status"] == "success"
+    assert executor_step["tool_calls"][0]["source"].startswith("data/docs/")
+
+
+def test_chat_complex_troubleshooting_includes_rag_evidence():
+    response = chat_endpoint(ChatRequest(query="为什么订单接口报500？"))
+    data = response.model_dump()
+    tool_names = [result["tool_name"] for result in data["tool_results"]]
+
+    assert data["route"]["type"] == "complex_troubleshooting"
+    assert tool_names == ["log_tool", "config_tool", "git_tool", "rag_retriever"]
+    assert "初步判断" in data["answer"]
+    assert "工具证据" in data["answer"]
+    assert "知识库补充" in data["answer"]
+    assert "建议处理方式" in data["answer"]
+
+
+def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
+    class NoMatchRetrieverTool:
+        name = "rag_retriever"
+
+        def run(self, query):
+            return {
+                "tool_name": "rag_retriever",
+                "result": "知识库中未检索到直接相关内容。",
+                "confidence": 0.0,
+                "source": "data/docs",
+                "documents": [],
+                "error": "no_relevant_documents",
+            }
+
+    original_init = Executor.__init__
+
+    def patched_init(self):
+        original_init(self)
+        self._tools["rag_retriever"] = NoMatchRetrieverTool()
+
+    monkeypatch.setattr(Executor, "__init__", patched_init)
+
+    response = chat_endpoint(ChatRequest(query="什么是量子缓存蓝图？"))
+    data = response.model_dump()
+
+    assert data["route"]["type"] == "simple_qa"
+    assert data["tool_results"][0]["status"] == "failed"
+    assert data["tool_results"][0]["error"] == "no_relevant_documents"
+    assert "知识库中未检索到直接相关内容" in data["answer"]
 
 
 def test_trace_id_unique():

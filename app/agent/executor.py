@@ -14,6 +14,7 @@ import time
 from typing import Any
 
 from app.core.models import Plan, ToolCallRecord
+from app.rag.retriever import LocalKnowledgeRetriever
 from app.tools.log_tool import LogTool
 from app.tools.config_tool import ConfigTool
 from app.tools.git_tool import GitTool
@@ -27,6 +28,7 @@ class Executor:
             "log_tool": LogTool(),
             "config_tool": ConfigTool(),
             "git_tool": GitTool(),
+            "rag_retriever": RAGRetrieverTool(),
         }
 
     def execute(self, query: str, plan: Plan) -> list[ToolCallRecord]:
@@ -73,6 +75,7 @@ class Executor:
                 record.result = output.get("result", str(output))
                 record.confidence = output.get("confidence", 0.0)
                 record.source = output.get("source", "")
+                record.documents = output.get("documents", [])
                 record.latency_ms = elapsed
                 record.error = output.get("error", "")
                 record.status = "failed" if record.error else "success"
@@ -87,3 +90,35 @@ class Executor:
             results.append(record)
 
         return results
+
+
+class RAGRetrieverTool:
+    """Executor 可调度的本地知识库检索工具。"""
+
+    name = "rag_retriever"
+
+    def __init__(self):
+        self._retriever = LocalKnowledgeRetriever()
+
+    def run(self, query: str, context: str | None = None) -> dict[str, Any]:
+        retrieval = self._retriever.retrieve(query, top_k=3)
+        documents = retrieval.get("documents", [])
+        source = ",".join(dict.fromkeys(doc["source"] for doc in documents))
+
+        if error := retrieval.get("error"):
+            return {
+                "tool_name": self.name,
+                "result": "知识库中未检索到直接相关内容。",
+                "confidence": 0.0,
+                "source": source or "data/docs",
+                "documents": [],
+                "error": error,
+            }
+
+        return {
+            "tool_name": self.name,
+            "result": f"检索到 {len(documents)} 条相关知识片段",
+            "confidence": max((doc["score"] for doc in documents), default=0.0),
+            "source": source,
+            "documents": documents,
+        }
