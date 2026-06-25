@@ -39,7 +39,9 @@ def test_local_log_adapter_search_logs_returns_adapter_result():
         "local_log_adapter",
         "data/logs/order-service.log",
     )
-    assert result.data["query"] == "订单接口 500"
+    assert "order-service" in result.data
+    assert "status=500" in result.data
+    assert result.confidence == 0.9
 
 
 def test_local_config_adapter_compare_configs_returns_adapter_result():
@@ -51,7 +53,9 @@ def test_local_config_adapter_compare_configs_returns_adapter_result():
         "local_config_adapter",
         "data/configs/dev.json,data/configs/prod.json",
     )
-    assert result.data["context"] == "dev vs prod"
+    assert "payment.timeout" in result.data
+    assert "feature.enable_new_payment_flow" in result.data
+    assert result.confidence == 0.85
 
 
 def test_local_git_adapter_search_commits_returns_adapter_result():
@@ -63,7 +67,9 @@ def test_local_git_adapter_search_commits_returns_adapter_result():
         "local_git_adapter",
         "data/git/commits.json",
     )
-    assert result.data["query"] == "payment timeout"
+    assert "mock-a1b2c3d" in result.data
+    assert "payment-service timeout" in result.data
+    assert result.confidence == 0.8
 
 
 def test_local_adapters_do_not_call_external_apis(monkeypatch):
