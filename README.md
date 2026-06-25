@@ -33,6 +33,10 @@ Day2 提供一组确定性的本地排障样例数据，作为后续工具系统
 
 `data/docs/` 存放本地知识库样例文档，覆盖配置中心、服务日志、接口异常排查流程和订单服务 FAQ。Day3 会基于这些文档实现轻量 RAG 检索。当前文档仅用于模拟研发排障场景，不接入外部知识库或真实公司数据。
 
+## LangGraph Execution Layer
+
+Router 和 Planner 仍由项目自定义实现。LangGraph 只用于 Executor 内部工具执行编排，不替代现有意图分类和任务规划。当前 graph 节点包括 `log_tool_node`、`config_tool_node`、`git_tool_node`、`rag_tool_node`。每个节点执行结果会进入 trace，方便后续 Trace Viewer 展示。
+
 ## Run
 
 ```bash

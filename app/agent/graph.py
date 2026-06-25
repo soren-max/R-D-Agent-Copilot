@@ -1,8 +1,8 @@
 """
-LangGraph 执行层骨架。
+LangGraph 工具执行层。
 
-当前图只作为 Day4 编排实验入口，不替换现有 Executor 和 /chat 主流程。
-节点按固定顺序执行，并在节点内部根据 Planner 输出判断是否需要调用工具。
+LangGraph 只在 Executor 内部编排工具节点；Router 和 Planner 仍由主流程负责。
+每个工具节点根据 Planner 输出的 plan 决定执行或跳过，并把执行/跳过元数据写入 state。
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ class AgentGraphState(TypedDict):
     query: str
     plan: dict[str, Any]
     tool_results: list[dict[str, Any]]
+    tool_calls: list[dict[str, Any]]
+    skipped_nodes: list[dict[str, Any]]
     errors: list[str]
 
 
@@ -42,25 +44,35 @@ def build_execution_graph():
 
 
 def execute_log_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "log_tool", LogTool())
+    return _execute_tool_if_needed(state, "log_tool_node", "log_tool", LogTool())
 
 
 def execute_config_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "config_tool", ConfigTool())
+    return _execute_tool_if_needed(state, "config_tool_node", "config_tool", ConfigTool())
 
 
 def execute_git_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "git_tool", GitTool())
+    return _execute_tool_if_needed(state, "git_tool_node", "git_tool", GitTool())
 
 
 def execute_rag_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "rag_retriever", _RAGRetrieverTool())
+    return _execute_tool_if_needed(state, "rag_tool_node", "rag_retriever", _RAGRetrieverTool())
 
 
-def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -> AgentGraphState:
+def _execute_tool_if_needed(
+    state: AgentGraphState,
+    node: str,
+    tool_name: str,
+    tool: Any,
+) -> AgentGraphState:
     next_state = _copy_state(state)
     step = _find_plan_step(next_state["plan"], tool_name)
     if step is None:
+        next_state["skipped_nodes"].append({
+            "node": node,
+            "tool_name": tool_name,
+            "reason": "tool_not_in_plan",
+        })
         return next_state
 
     start = time.perf_counter()
@@ -68,10 +80,13 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
         output = tool.run(next_state["query"])
         latency_ms = int((time.perf_counter() - start) * 1000)
         error = output.get("error", "")
-        next_state["tool_results"].append({
+        result = {
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "node": node,
+            "tool": tool_name,
             "tool_name": output.get("tool_name", tool_name),
+            "description": step.get("description", ""),
             "status": "failed" if error else "success",
             "result": output.get("result", ""),
             "confidence": output.get("confidence", 0.0),
@@ -79,16 +94,21 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
             "documents": output.get("documents", []),
             "error": error,
             "latency_ms": latency_ms,
-        })
+        }
+        next_state["tool_results"].append(result)
+        next_state["tool_calls"].append(_tool_call_trace(result))
         if error:
             next_state["errors"].append(f"{tool_name}:{error}")
     except Exception as exc:
         latency_ms = int((time.perf_counter() - start) * 1000)
         error = f"{type(exc).__name__}: {exc}"
-        next_state["tool_results"].append({
+        result = {
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "node": node,
+            "tool": tool_name,
             "tool_name": tool_name,
+            "description": step.get("description", ""),
             "status": "failed",
             "result": "",
             "confidence": 0.0,
@@ -96,7 +116,9 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
             "documents": [],
             "error": error,
             "latency_ms": latency_ms,
-        })
+        }
+        next_state["tool_results"].append(result)
+        next_state["tool_calls"].append(_tool_call_trace(result))
         next_state["errors"].append(f"{tool_name}:{error}")
 
     return next_state
@@ -114,7 +136,19 @@ def _copy_state(state: AgentGraphState) -> AgentGraphState:
         "query": state["query"],
         "plan": state["plan"],
         "tool_results": list(state.get("tool_results", [])),
+        "tool_calls": list(state.get("tool_calls", [])),
+        "skipped_nodes": list(state.get("skipped_nodes", [])),
         "errors": list(state.get("errors", [])),
+    }
+
+
+def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "node": result.get("node", ""),
+        "tool_name": result.get("tool_name", result.get("tool", "")),
+        "status": result.get("status", "pending"),
+        "latency_ms": result.get("latency_ms", 0),
+        "source": result.get("source", ""),
     }
 
 

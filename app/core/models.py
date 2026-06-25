@@ -46,6 +46,7 @@ class ToolCallRecord(BaseModel):
 
     step_id: int
     action: str
+    node: str = ""
     tool: str
     tool_name: str = ""
     description: str
@@ -63,21 +64,36 @@ class ToolCallRecord(BaseModel):
 class TraceToolCall(BaseModel):
     """Trace 中记录的单个工具调用摘要。"""
 
+    node: str = ""
     tool_name: str
     status: str
     latency_ms: int = 0
     source: str = ""
 
 
+class TraceSkippedNode(BaseModel):
+    """Trace 中记录的跳过工具节点摘要。"""
+
+    node: str
+    tool_name: str
+    reason: str
+
+
 class TraceStep(BaseModel):
     """Trace 中的单个阶段记录。"""
 
     stage: str = Field(description="阶段名：router | planner | executor")
+    engine: str = Field(default="", description="执行引擎，如 langgraph")
+    graph_name: str = Field(default="", description="执行图名称")
     output: str = Field(description="该阶段的摘要输出")
     latency_ms: int = Field(default=0, description="该阶段耗时（毫秒）")
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",
+    )
+    skipped_nodes: list[TraceSkippedNode] = Field(
+        default_factory=list,
+        description="executor 阶段跳过的工具节点摘要",
     )
 
 

@@ -1,3 +1,4 @@
+import app.agent.executor as executor_module
 from app.agent.executor import Executor
 from app.agent.pipeline import run_pipeline
 from app.agent.planner import Planner
@@ -81,10 +82,13 @@ def test_chat_api_returns_day1_acceptance_shape():
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert executor_step["engine"] == "langgraph"
+    assert executor_step["graph_name"] == "tool_execution_graph"
     assert all(
-        set(["tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
+        set(["node", "tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
         for tool_call in executor_step["tool_calls"]
     )
+    assert executor_step["skipped_nodes"] == []
 
 
 def test_troubleshooting_pipeline_executes_tools_and_trace():
@@ -107,6 +111,14 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     trace_stages = [s.stage for s in resp.trace.steps]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
+    assert executor_step.engine == "langgraph"
+    assert executor_step.graph_name == "tool_execution_graph"
+    assert [call.node for call in executor_step.tool_calls] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert [call.tool_name for call in executor_step.tool_calls] == [
         "log_tool",
         "config_tool",
@@ -116,6 +128,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert all(call.status == "success" for call in executor_step.tool_calls)
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
     assert all(call.source.startswith("data/") for call in executor_step.tool_calls)
+    assert executor_step.skipped_nodes == []
     assert all(step.latency_ms >= 0 for step in resp.trace.steps)
 
 
@@ -131,6 +144,12 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
         "git_tool",
         "rag_retriever",
     ]
+    assert [result.node for result in results] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert all(result.status == "success" for result in results)
     assert all(result.latency_ms >= 0 for result in results)
     assert all(result.source.startswith("data/") for result in results)
@@ -138,16 +157,29 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
 
 
 def test_executor_returns_failed_status_for_tool_errors():
-    class FailingTool:
-        name = "log_tool"
-
-        def run(self, query):
+    class FailingGraph:
+        def invoke(self, state):
             return {
-                "tool_name": "log_tool",
-                "result": "",
-                "confidence": 0.0,
-                "source": "data/logs/order-service.log",
-                "error": "file_not_found",
+                "query": state["query"],
+                "plan": state["plan"],
+                "tool_results": [
+                    {
+                        "step_id": 1,
+                        "action": "query_logs",
+                        "node": "log_tool_node",
+                        "tool": "log_tool",
+                        "tool_name": "log_tool",
+                        "description": "查询日志",
+                        "status": "failed",
+                        "result": "",
+                        "confidence": 0.0,
+                        "source": "data/logs/order-service.log",
+                        "documents": [],
+                        "error": "file_not_found",
+                        "latency_ms": 5,
+                    }
+                ],
+                "errors": ["log_tool:file_not_found"],
             }
 
     plan = Plan(
@@ -162,16 +194,17 @@ def test_executor_returns_failed_status_for_tool_errors():
         ],
     )
     executor = Executor()
-    executor._tools["log_tool"] = FailingTool()
+    executor._graph = FailingGraph()
 
     result = executor.execute("订单报错", plan)[0]
 
     assert result.status == "failed"
+    assert result.node == "log_tool_node"
     assert result.result == ""
     assert result.confidence == 0.0
     assert result.source == "data/logs/order-service.log"
     assert result.error == "file_not_found"
-    assert result.latency_ms >= 0
+    assert result.latency_ms == 5
 
 
 def test_synthesizer_mentions_partial_tool_failure():
@@ -216,9 +249,23 @@ def test_chat_simple_qa_uses_rag_retriever_and_trace():
     assert any("\u4e00" <= c <= "\u9fff" for c in data["answer"])
 
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert data["tool_results"][0]["node"] == "rag_tool_node"
+    assert executor_step["engine"] == "langgraph"
+    assert executor_step["graph_name"] == "tool_execution_graph"
+    assert executor_step["tool_calls"][0]["node"] == "rag_tool_node"
     assert executor_step["tool_calls"][0]["tool_name"] == "rag_retriever"
     assert executor_step["tool_calls"][0]["status"] == "success"
     assert executor_step["tool_calls"][0]["source"].startswith("data/docs/")
+    assert [node["tool_name"] for node in executor_step["skipped_nodes"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+    ]
+    assert all(node["reason"] == "tool_not_in_plan" for node in executor_step["skipped_nodes"])
+    assert not any(
+        result["tool_name"] in {"log_tool", "config_tool", "git_tool"}
+        for result in data["tool_results"]
+    )
 
 
 def test_chat_complex_troubleshooting_includes_rag_evidence():
@@ -228,33 +275,60 @@ def test_chat_complex_troubleshooting_includes_rag_evidence():
 
     assert data["route"]["type"] == "complex_troubleshooting"
     assert tool_names == ["log_tool", "config_tool", "git_tool", "rag_retriever"]
+    assert [result["node"] for result in data["tool_results"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert "初步判断" in data["answer"]
     assert "工具证据" in data["answer"]
     assert "知识库补充" in data["answer"]
     assert "建议处理方式" in data["answer"]
 
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert [call["tool_name"] for call in executor_step["tool_calls"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
+    assert [call["node"] for call in executor_step["tool_calls"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
+    assert executor_step["skipped_nodes"] == []
+
 
 def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
-    class NoMatchRetrieverTool:
-        name = "rag_retriever"
-
-        def run(self, query):
+    class NoMatchGraph:
+        def invoke(self, state):
             return {
-                "tool_name": "rag_retriever",
-                "result": "知识库中未检索到直接相关内容。",
-                "confidence": 0.0,
-                "source": "data/docs",
-                "documents": [],
-                "error": "no_relevant_documents",
+                "query": state["query"],
+                "plan": state["plan"],
+                "tool_results": [
+                    {
+                        "step_id": 1,
+                        "action": "retrieve_knowledge",
+                        "node": "rag_tool_node",
+                        "tool": "rag_retriever",
+                        "tool_name": "rag_retriever",
+                        "description": "从本地知识库检索相关说明",
+                        "status": "failed",
+                        "result": "知识库中未检索到直接相关内容。",
+                        "confidence": 0.0,
+                        "source": "data/docs",
+                        "documents": [],
+                        "error": "no_relevant_documents",
+                        "latency_ms": 3,
+                    }
+                ],
+                "errors": ["rag_retriever:no_relevant_documents"],
             }
 
-    original_init = Executor.__init__
-
-    def patched_init(self):
-        original_init(self)
-        self._tools["rag_retriever"] = NoMatchRetrieverTool()
-
-    monkeypatch.setattr(Executor, "__init__", patched_init)
+    monkeypatch.setattr(executor_module, "build_execution_graph", lambda: NoMatchGraph())
 
     response = chat_endpoint(ChatRequest(query="什么是量子缓存蓝图？"))
     data = response.model_dump()
