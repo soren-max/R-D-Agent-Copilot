@@ -34,3 +34,7 @@ DeepSeek 只用于 Answer Synthesizer，LLM 不控制 Router、Planner 或 Tool 
 
 完成 Week1 全链路回归验收，覆盖 simple QA、复杂排障、LangGraph metadata、RAG、LLM fallback 和安全配置。
 补充架构文档、demo guide 和 v0.1.0 release checklist，方便 Week2 开发和面试展示。
+
+## Day9：API Adapter abstraction
+
+API Adapter 抽象层，将 tools 与本地数据源解耦，预留真实日志平台、配置中心、Git API 接入能力。
