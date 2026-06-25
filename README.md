@@ -2,6 +2,53 @@
 
 研发排障智能助手 / Agent 系统 / 工具调用。
 
+## Week1 Milestone
+
+- Day1 Agent MVP：完成 `POST /chat`、Router、Planner、Executor、Tools、Trace、Response 的确定性闭环。
+- Day2 Local Tools：用本地样例数据实现日志、配置和 Git 变更工具。
+- Day3 Local RAG：基于 `data/docs/` 实现本地知识库检索。
+- Day4 LangGraph Execution Layer：把工具执行编排放入 Executor 内部的 LangGraph layer。
+- Day5 Conditional Execution / Retry / Fallback：支持条件工具执行、失败重试和工具 fallback。
+- Day6 DeepSeek Answer Synthesizer：DeepSeek 只用于最终中文回答生成，不控制 Router、Planner 或 Tool Selection。
+- Day7 Regression / Docs / Release Checklist：补齐第一周回归验收、架构文档和 demo 说明。
+
+## Quick Start
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。
+
+## API Demo
+
+简单问答：
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query":"什么是配置中心？"}'
+```
+
+复杂排障：
+
+```bash
+curl -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query":"为什么订单接口报500？"}'
+```
+
+本地 demo 脚本：
+
+```bash
+python scripts/demo_week1.py
+```
+
+更多说明见 `docs/architecture.md` 和 `docs/week1-demo.md`。
+
 ## Day1 MVP
 
 Day1 只实现最小可运行 Agent 闭环：
