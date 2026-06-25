@@ -42,6 +42,7 @@ class Executor:
                 step_id=step.id,
                 action=step.action,
                 tool=step.tool,
+                tool_name=step.tool,
                 description=step.description,
             )
 
@@ -49,6 +50,7 @@ class Executor:
                 # simple_qa 无需工具调用
                 record.status = "skipped"
                 record.result = "无需工具调用，直接回答即可。"
+                record.source = "executor"
                 record.latency_ms = 0
                 results.append(record)
                 continue
@@ -66,8 +68,10 @@ class Executor:
             try:
                 output = tool.run(query)
                 elapsed = int((time.perf_counter() - start) * 1000)
+                record.tool_name = output.get("tool_name", step.tool)
                 record.result = output.get("result", str(output))
                 record.confidence = output.get("confidence", 0.0)
+                record.source = output.get("source", "")
                 record.latency_ms = elapsed
                 record.status = "success"
             except Exception as e:

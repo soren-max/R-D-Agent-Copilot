@@ -47,9 +47,11 @@ class ToolCallRecord(BaseModel):
     step_id: int
     action: str
     tool: str
+    tool_name: str = ""
     description: str
     result: str = ""
     confidence: float = 0.0
+    source: str = ""
     latency_ms: int = 0
     status: str = "pending"  # pending | success | skipped | error
 

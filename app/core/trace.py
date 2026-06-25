@@ -18,7 +18,7 @@ class Tracer:
     """执行轨迹记录器。"""
 
     def __init__(self):
-        self._trace_id: str = uuid.uuid4().hex[:12]
+        self._trace_id: str = str(uuid.uuid4())
         self._steps: list[TraceStep] = []
         self._final_answer: str = ""
         self._timestamps: dict[str, float] = {}

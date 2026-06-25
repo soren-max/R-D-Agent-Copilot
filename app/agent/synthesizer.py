@@ -30,9 +30,12 @@ class Synthesizer:
     def _synthesize_simple_qa(
         self, query: str, tool_results: list[ToolCallRecord]
     ) -> str:
+        evidence = "；".join(r.result for r in tool_results if r.result) or "未获取到执行器结果。"
         return (
-            f"关于「{query}」的问题，这是一个概念解释类问题。"
-            f"由于当前为 Day1 演示阶段，暂未接入知识库，建议查阅相关文档获取详细说明。"
+            f"初步判断：Router 将「{query}」判定为简单问答。\n\n"
+            f"排查证据：{evidence}\n\n"
+            "建议处理方式：Day1 未接入知识库或真实 LLM，当前不能编造工具之外的信息；"
+            "建议在后续阶段接入受控知识源后再生成详细解释。"
         )
 
     def _synthesize_troubleshooting(

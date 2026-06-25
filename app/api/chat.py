@@ -11,7 +11,7 @@ from fastapi import APIRouter
 from app.agent.pipeline import run_pipeline
 from app.core.models import ChatRequest, ChatResponse
 
-router = APIRouter(prefix="/api", tags=["chat"])
+router = APIRouter(tags=["chat"])
 
 
 @router.post("/chat", response_model=ChatResponse)
