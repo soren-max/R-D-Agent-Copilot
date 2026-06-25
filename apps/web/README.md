@@ -30,6 +30,19 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 
 该变量只用于后续 `/chat` API 集成。不要在前端环境变量中放置 API Key 或任何密钥。
 
+## Trace Viewer
+
+Trace Viewer 用于展示 Agent 执行链路，帮助演示一次 `/chat` 请求如何经过 Router、Planner、LangGraph Executor 和 Synthesizer。
+
+当前展示内容包括：
+
+- Router、Planner、Executor、Synthesizer 阶段时间线
+- LangGraph executor engine、graph_name 和 fallback 状态
+- tool_calls 工具调用列表
+- skipped_nodes 跳过节点列表
+- retry、latency、source 等执行元数据
+- Synthesizer 的 DeepSeek / 规则兜底状态
+
 ## 本地验收
 
 先启动后端：

@@ -30,6 +30,41 @@ export type ToolResult = {
   result: string;
 };
 
+export type TraceToolCall = {
+  node?: string;
+  tool_name?: string;
+  status?: string;
+  retry_count?: number;
+  error?: string;
+  latency_ms?: number;
+  source?: string;
+};
+
+export type TraceSkippedNode = {
+  node?: string;
+  tool_name?: string;
+  reason?: string;
+};
+
+export type TraceStep = {
+  stage?: string;
+  engine?: string;
+  graph_name?: string;
+  output?: string;
+  latency_ms?: number;
+  llm_used?: boolean;
+  llm_error?: string | null;
+  tool_calls?: TraceToolCall[];
+  skipped_nodes?: TraceSkippedNode[];
+  fallback_used?: boolean;
+};
+
+export type TraceData = {
+  trace_id?: string;
+  steps?: TraceStep[];
+  final_answer?: string;
+};
+
 export type ChatResponse = {
   answer: string;
   answer_source: "fallback" | "llm" | string;
@@ -38,6 +73,7 @@ export type ChatResponse = {
   route: RouteResult;
   plan: PlanResult;
   tool_results: ToolResult[];
+  trace?: TraceData;
 };
 
 export async function postChat(query: string): Promise<ChatResponse> {
