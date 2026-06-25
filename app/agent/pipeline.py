@@ -35,10 +35,10 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("executor")
     executor = Executor()
     tool_results = executor.execute(request.query, plan)
-    tool_names = [r.tool for r in tool_results if r.tool != "none"]
-    tracer.end_stage("executor",
-                     output=f"tools_called={len(tool_results)}",
-                     tool_calls=tool_names)
+    tracer.end_executor_stage(
+        output=f"tools_called={len([r for r in tool_results if r.tool != 'none'])}",
+        tool_results=tool_results,
+    )
 
     # ── 4. Synthesizer ──
     synthesizer = Synthesizer()

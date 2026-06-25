@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from app.core.models import Plan, PlanStep, ToolCallRecord
+from app.core.models import Plan, ToolCallRecord
 from app.tools.log_tool import LogTool
 from app.tools.config_tool import ConfigTool
 from app.tools.git_tool import GitTool
@@ -57,8 +57,9 @@ class Executor:
 
             tool = self._tools.get(step.tool)
             if tool is None:
-                record.status = "error"
-                record.result = f"未知工具: {step.tool}"
+                record.status = "failed"
+                record.result = ""
+                record.error = f"unknown_tool:{step.tool}"
                 record.latency_ms = 0
                 results.append(record)
                 continue
@@ -73,12 +74,15 @@ class Executor:
                 record.confidence = output.get("confidence", 0.0)
                 record.source = output.get("source", "")
                 record.latency_ms = elapsed
-                record.status = "success"
+                record.error = output.get("error", "")
+                record.status = "failed" if record.error else "success"
             except Exception as e:
                 elapsed = int((time.perf_counter() - start) * 1000)
-                record.result = f"工具执行异常: {e}"
+                record.result = ""
+                record.confidence = 0.0
+                record.error = f"{type(e).__name__}: {e}"
                 record.latency_ms = elapsed
-                record.status = "error"
+                record.status = "failed"
 
             results.append(record)
 

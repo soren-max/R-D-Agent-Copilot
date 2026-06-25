@@ -11,7 +11,7 @@ import time
 import uuid
 from typing import Any
 
-from app.core.models import TraceData, TraceStep
+from app.core.models import ToolCallRecord, TraceData, TraceStep, TraceToolCall
 
 
 class Tracer:
@@ -27,7 +27,12 @@ class Tracer:
         """记录某个阶段的开始时间。"""
         self._timestamps[stage] = time.perf_counter()
 
-    def end_stage(self, stage: str, output: str = "", tool_calls: list[str] | None = None) -> None:
+    def end_stage(
+        self,
+        stage: str,
+        output: str = "",
+        tool_calls: list[TraceToolCall] | None = None,
+    ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
         latency_ms = 0
@@ -39,6 +44,19 @@ class Tracer:
             latency_ms=latency_ms,
             tool_calls=tool_calls or [],
         ))
+
+    def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
+        """记录 executor 阶段，并保存每个工具调用的状态摘要。"""
+        tool_calls = [
+            TraceToolCall(
+                tool_name=result.tool_name or result.tool,
+                status=result.status,
+                latency_ms=result.latency_ms,
+            )
+            for result in tool_results
+            if result.tool != "none"
+        ]
+        self.end_stage("executor", output=output, tool_calls=tool_calls)
 
     def set_final_answer(self, answer: str) -> None:
         self._final_answer = answer
