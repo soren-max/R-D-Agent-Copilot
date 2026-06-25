@@ -14,7 +14,7 @@ def test_default_llm_enabled_is_false(monkeypatch):
     ]:
         monkeypatch.delenv(key, raising=False)
 
-    settings = get_llm_settings()
+    settings = get_llm_settings(load_env=False)
 
     assert settings.enabled is False
     assert settings.provider == "deepseek"
@@ -35,9 +35,9 @@ def test_missing_api_key_error_does_not_leak_secret():
 
 
 def test_llm_settings_repr_masks_api_key():
-    settings = LLMSettings(enabled=True, deepseek_api_key="sk-secret-value")
+    settings = LLMSettings(enabled=True, deepseek_api_key="secret-test-value")
 
-    assert "sk-secret-value" not in repr(settings)
+    assert "secret-test-value" not in repr(settings)
 
 
 def test_llm_client_is_enabled_reflects_settings():
@@ -53,7 +53,7 @@ def test_generate_disabled_does_not_call_external_client():
         return object()
 
     client = LLMClient(
-        LLMSettings(enabled=False, deepseek_api_key="sk-test"),
+        LLMSettings(enabled=False, deepseek_api_key="test-api-key"),
         openai_factory=openai_factory,
     )
 
@@ -95,14 +95,14 @@ def test_generate_uses_openai_compatible_deepseek_settings():
         provider="deepseek",
         model="deepseek-v4-flash",
         base_url="https://api.deepseek.com",
-        deepseek_api_key="sk-test",
+        deepseek_api_key="test-api-key",
     )
 
     result = LLMClient(settings, openai_factory=openai_factory).generate("system", "user")
 
     assert result == "生成结果"
     assert calls["client"] == {
-        "api_key": "sk-test",
+        "api_key": "test-api-key",
         "base_url": "https://api.deepseek.com",
     }
     assert calls["create"] == {
