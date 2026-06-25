@@ -151,6 +151,7 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
         "rag_tool_node",
     ]
     assert all(result.status == "success" for result in results)
+    assert all(result.retry_count == 0 for result in results)
     assert all(result.latency_ms >= 0 for result in results)
     assert all(result.source.startswith("data/") for result in results)
     assert results[-1].documents
@@ -176,9 +177,23 @@ def test_executor_returns_failed_status_for_tool_errors():
                         "source": "data/logs/order-service.log",
                         "documents": [],
                         "error": "file_not_found",
+                        "retry_count": 1,
                         "latency_ms": 5,
                     }
                 ],
+                "tool_calls": [
+                    {
+                        "node": "log_tool_node",
+                        "tool_name": "log_tool",
+                        "status": "failed",
+                        "retry_count": 1,
+                        "error": "file_not_found",
+                        "latency_ms": 5,
+                        "source": "data/logs/order-service.log",
+                    }
+                ],
+                "skipped_nodes": [],
+                "fallback_used": True,
                 "errors": ["log_tool:file_not_found"],
             }
 
@@ -204,7 +219,57 @@ def test_executor_returns_failed_status_for_tool_errors():
     assert result.confidence == 0.0
     assert result.source == "data/logs/order-service.log"
     assert result.error == "file_not_found"
+    assert result.retry_count == 1
     assert result.latency_ms == 5
+
+
+def test_chat_tool_failure_retries_falls_back_and_continues(monkeypatch):
+    calls = {"count": 0}
+
+    def fail_log_tool(self, query, context=""):
+        calls["count"] += 1
+        return {
+            "tool_name": self.name,
+            "status": "failed",
+            "result": "",
+            "confidence": 0.0,
+            "source": "data/logs/order-service.log",
+            "documents": [],
+            "error": "file_not_found",
+        }
+
+    monkeypatch.setattr(LogTool, "run", fail_log_tool)
+
+    response = chat_endpoint(ChatRequest(query="为什么订单接口报500？"))
+    data = response.model_dump()
+
+    assert calls["count"] == 2
+    assert data["route"]["type"] == "complex_troubleshooting"
+    assert [result["tool_name"] for result in data["tool_results"]] == [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
+    log_result = data["tool_results"][0]
+    assert log_result["status"] == "failed"
+    assert log_result["error"] == "file_not_found"
+    assert log_result["retry_count"] == 1
+    assert all(result["status"] == "success" for result in data["tool_results"][1:])
+    assert all(result["retry_count"] == 0 for result in data["tool_results"][1:])
+    assert "部分工具查询失败" in data["answer"]
+
+    executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert executor_step["fallback_used"] is True
+    assert executor_step["tool_calls"][0]["tool_name"] == "log_tool"
+    assert executor_step["tool_calls"][0]["status"] == "failed"
+    assert executor_step["tool_calls"][0]["retry_count"] == 1
+    assert executor_step["tool_calls"][0]["error"] == "file_not_found"
+    assert [call["tool_name"] for call in executor_step["tool_calls"][1:]] == [
+        "config_tool",
+        "git_tool",
+        "rag_retriever",
+    ]
 
 
 def test_synthesizer_mentions_partial_tool_failure():

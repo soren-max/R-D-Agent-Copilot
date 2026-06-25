@@ -33,6 +33,7 @@ class Tracer:
         output: str = "",
         tool_calls: list[TraceToolCall] | None = None,
         skipped_nodes: list[TraceSkippedNode] | None = None,
+        fallback_used: bool = False,
         engine: str = "",
         graph_name: str = "",
     ) -> None:
@@ -49,6 +50,7 @@ class Tracer:
             latency_ms=latency_ms,
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
+            fallback_used=fallback_used,
         ))
 
     def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
@@ -62,6 +64,8 @@ class Tracer:
                     node=result.node,
                     tool_name=result.tool_name or result.tool,
                     status=result.status,
+                    retry_count=result.retry_count,
+                    error=result.error,
                     latency_ms=result.latency_ms,
                     source=result.source,
                 )
@@ -77,6 +81,7 @@ class Tracer:
             output=output,
             tool_calls=tool_calls,
             skipped_nodes=skipped_nodes,
+            fallback_used=getattr(tool_results, "fallback_used", False),
             engine="langgraph",
             graph_name="tool_execution_graph",
         )

@@ -24,6 +24,7 @@ class AgentGraphState(TypedDict):
     tool_results: list[dict[str, Any]]
     tool_calls: list[dict[str, Any]]
     skipped_nodes: list[dict[str, Any]]
+    fallback_used: bool
     errors: list[str]
 
 
@@ -75,53 +76,77 @@ def _execute_tool_if_needed(
         })
         return next_state
 
+    output, latency_ms, retry_count = _run_tool_with_retry(tool, next_state["query"])
+    error = output.get("error", "")
+    status = output.get("status") or ("failed" if error else "success")
+    result = {
+        "step_id": step.get("id"),
+        "action": step.get("action"),
+        "node": node,
+        "tool": tool_name,
+        "tool_name": output.get("tool_name", tool_name),
+        "description": step.get("description", ""),
+        "status": status,
+        "result": output.get("result", ""),
+        "confidence": output.get("confidence", 0.0),
+        "source": output.get("source", ""),
+        "documents": output.get("documents", []),
+        "error": error,
+        "retry_count": retry_count,
+        "latency_ms": latency_ms,
+    }
+    next_state["tool_results"].append(result)
+    next_state["tool_calls"].append(_tool_call_trace(result))
+    if status == "failed":
+        next_state["fallback_used"] = True
+    if error:
+        next_state["errors"].append(f"{tool_name}:{error}")
+
+    return next_state
+
+
+def _run_tool_with_retry(tool: Any, query: str) -> tuple[dict[str, Any], int, int]:
+    max_retry = 1
+    retry_count = 0
+    total_latency_ms = 0
+
+    output, latency_ms = _run_tool_once(tool, query)
+    total_latency_ms += latency_ms
+
+    while retry_count < max_retry and _should_retry(output):
+        retry_count += 1
+        output, latency_ms = _run_tool_once(tool, query)
+        total_latency_ms += latency_ms
+
+    return output, total_latency_ms, retry_count
+
+
+def _run_tool_once(tool: Any, query: str) -> tuple[dict[str, Any], int]:
     start = time.perf_counter()
     try:
-        output = tool.run(next_state["query"])
+        output = tool.run(query)
         latency_ms = int((time.perf_counter() - start) * 1000)
-        error = output.get("error", "")
-        result = {
-            "step_id": step.get("id"),
-            "action": step.get("action"),
-            "node": node,
-            "tool": tool_name,
-            "tool_name": output.get("tool_name", tool_name),
-            "description": step.get("description", ""),
-            "status": "failed" if error else "success",
-            "result": output.get("result", ""),
-            "confidence": output.get("confidence", 0.0),
-            "source": output.get("source", ""),
-            "documents": output.get("documents", []),
-            "error": error,
-            "latency_ms": latency_ms,
-        }
-        next_state["tool_results"].append(result)
-        next_state["tool_calls"].append(_tool_call_trace(result))
-        if error:
-            next_state["errors"].append(f"{tool_name}:{error}")
+        return output, latency_ms
     except Exception as exc:
         latency_ms = int((time.perf_counter() - start) * 1000)
-        error = f"{type(exc).__name__}: {exc}"
-        result = {
-            "step_id": step.get("id"),
-            "action": step.get("action"),
-            "node": node,
-            "tool": tool_name,
-            "tool_name": tool_name,
-            "description": step.get("description", ""),
+        return {
+            "tool_name": getattr(tool, "name", ""),
             "status": "failed",
             "result": "",
             "confidence": 0.0,
             "source": "",
             "documents": [],
-            "error": error,
-            "latency_ms": latency_ms,
-        }
-        next_state["tool_results"].append(result)
-        next_state["tool_calls"].append(_tool_call_trace(result))
-        next_state["errors"].append(f"{tool_name}:{error}")
+            "error": f"{type(exc).__name__}: {exc}",
+        }, latency_ms
 
-    return next_state
+
+def _should_retry(output: dict[str, Any]) -> bool:
+    status = output.get("status") or ("failed" if output.get("error") else "success")
+    return (
+        status == "failed"
+        and bool(output.get("error"))
+        and output.get("confidence", 0.0) == 0.0
+    )
 
 
 def _find_plan_step(plan: dict[str, Any], tool_name: str) -> dict[str, Any] | None:
@@ -138,6 +163,7 @@ def _copy_state(state: AgentGraphState) -> AgentGraphState:
         "tool_results": list(state.get("tool_results", [])),
         "tool_calls": list(state.get("tool_calls", [])),
         "skipped_nodes": list(state.get("skipped_nodes", [])),
+        "fallback_used": state.get("fallback_used", False),
         "errors": list(state.get("errors", [])),
     }
 
@@ -147,6 +173,8 @@ def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
         "node": result.get("node", ""),
         "tool_name": result.get("tool_name", result.get("tool", "")),
         "status": result.get("status", "pending"),
+        "retry_count": result.get("retry_count", 0),
+        "error": result.get("error", ""),
         "latency_ms": result.get("latency_ms", 0),
         "source": result.get("source", ""),
     }
