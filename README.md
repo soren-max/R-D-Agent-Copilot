@@ -76,6 +76,22 @@ curl -X POST http://127.0.0.1:8000/chat \
 
 更多验收说明见 `docs/day5-langgraph-demo.md`。
 
+## DeepSeek API Configuration
+
+Day6 开始支持 DeepSeek API 配置和 OpenAI-compatible client 封装。LLM 默认关闭，仅作为后续最终回答生成器使用，不控制 Router、Planner、Tool 执行或 LangGraph 编排。
+
+在 `.env` 中按需配置：
+
+```bash
+LLM_ENABLED=true
+LLM_PROVIDER=deepseek
+LLM_MODEL=deepseek-v4-flash
+LLM_BASE_URL=https://api.deepseek.com
+DEEPSEEK_API_KEY=your_api_key_here
+```
+
+默认 `LLM_ENABLED=false`，没有 API Key 时项目仍可运行。真实 API Key 不应写入代码或提交到仓库。
+
 ## Run
 
 ```bash
