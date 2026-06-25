@@ -30,6 +30,24 @@ class Synthesizer:
     def _synthesize_simple_qa(
         self, query: str, tool_results: list[ToolCallRecord]
     ) -> str:
+        rag_result = next((r for r in tool_results if r.tool == "rag_retriever"), None)
+        if rag_result and rag_result.documents:
+            top_doc = rag_result.documents[0]
+            sources = "、".join(dict.fromkeys(doc["source"] for doc in rag_result.documents))
+            return (
+                f"简要解释：针对「{query}」，本地知识库中的相关说明是："
+                f"{top_doc['content'][:220]}\n\n"
+                f"相关知识来源：{sources}\n\n"
+                "补充说明：以上内容来自本地 Markdown 知识库样例，当前未接入真实 LLM 或外部知识源。"
+            )
+
+        if rag_result and rag_result.error:
+            return (
+                f"简要解释：知识库中未检索到直接相关内容，暂时无法基于本地文档解释「{query}」。\n\n"
+                f"相关知识来源：{rag_result.source or 'data/docs'}\n\n"
+                "补充说明：当前回答不会编造知识库之外的具体事实。"
+            )
+
         evidence = "；".join(r.result for r in tool_results if r.result) or "未获取到执行器结果。"
         return (
             f"初步判断：Router 将「{query}」判定为简单问答。\n\n"
@@ -48,6 +66,8 @@ class Synthesizer:
         log_result = ""
         config_result = ""
         git_result = ""
+        rag_result = ""
+        rag_sources = ""
         has_error = False
         has_failed_tool = any(record.status == "failed" for record in tool_results)
 
@@ -60,6 +80,11 @@ class Synthesizer:
                 config_result = record.result[:200]
             elif record.tool == "git_tool" and record.status == "success":
                 git_result = record.result[:200]
+            elif record.tool == "rag_retriever" and record.status == "success" and record.documents:
+                rag_result = "；".join(doc["content"][:120] for doc in record.documents[:2])
+                rag_sources = "、".join(dict.fromkeys(doc["source"] for doc in record.documents))
+            elif record.tool == "rag_retriever" and record.error:
+                rag_result = "知识库中未检索到直接相关内容。"
 
         # 合成三段式回答
         paragraphs: list[str] = []
@@ -77,11 +102,14 @@ class Synthesizer:
 
         # 2. 证据
         if log_result:
-            paragraphs.append(f"【日志分析】{log_result}")
+            paragraphs.append(f"工具证据：【日志分析】{log_result}")
         if config_result:
-            paragraphs.append(f"【配置分析】{config_result}")
+            paragraphs.append(f"工具证据：【配置分析】{config_result}")
         if git_result:
-            paragraphs.append(f"【代码变更】{git_result}")
+            paragraphs.append(f"工具证据：【代码变更】{git_result}")
+        if rag_result:
+            source_suffix = f" 来源：{rag_sources}" if rag_sources else ""
+            paragraphs.append(f"知识库补充：{rag_result}{source_suffix}")
 
         # 3. 建议
         suggestions: list[str] = []

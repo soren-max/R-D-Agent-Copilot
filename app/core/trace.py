@@ -52,6 +52,7 @@ class Tracer:
                 tool_name=result.tool_name or result.tool,
                 status=result.status,
                 latency_ms=result.latency_ms,
+                source=result.source,
             )
             for result in tool_results
             if result.tool != "none"

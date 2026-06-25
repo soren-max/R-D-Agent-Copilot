@@ -1,8 +1,8 @@
 """
 任务规划器 — 将 Router 分类结果拆解为可执行步骤。
 
-simple_qa → 单步：retrieve_knowledge (tool=none)
-complex_troubleshooting → 三步：query_logs → check_config → analyze_git_diff
+simple_qa → 单步：retrieve_knowledge
+complex_troubleshooting → 四步：query_logs → check_config → analyze_git_diff → retrieve_knowledge
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ class Planner:
         return Plan(
             plan_type="simple_qa",
             steps=[
-                PlanStep(id=1, action="retrieve_knowledge", tool="none",
-                         description=f"根据已有知识解释「{query}」"),
+                PlanStep(id=1, action="retrieve_knowledge", tool="rag_retriever",
+                         description="从本地知识库检索相关说明"),
             ],
         )
 
@@ -40,5 +40,7 @@ class Planner:
                          description="检查服务配置是否正确"),
                 PlanStep(id=3, action="analyze_git_diff", tool="git_tool",
                          description="分析最近代码变更，寻找引入问题的变更"),
+                PlanStep(id=4, action="retrieve_knowledge", tool="rag_retriever",
+                         description="从本地知识库检索排障知识补充"),
             ],
         )
