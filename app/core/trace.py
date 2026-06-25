@@ -36,6 +36,8 @@ class Tracer:
         fallback_used: bool = False,
         engine: str = "",
         graph_name: str = "",
+        llm_used: bool = False,
+        llm_error: str = "",
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -48,6 +50,8 @@ class Tracer:
             graph_name=graph_name,
             output=output,
             latency_ms=latency_ms,
+            llm_used=llm_used,
+            llm_error=llm_error,
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
             fallback_used=fallback_used,
@@ -84,6 +88,21 @@ class Tracer:
             fallback_used=getattr(tool_results, "fallback_used", False),
             engine="langgraph",
             graph_name="tool_execution_graph",
+        )
+
+    def end_synthesizer_stage(
+        self,
+        answer_source: str,
+        llm_used: bool,
+        llm_error: str | None,
+    ) -> None:
+        """记录 synthesizer 阶段的 LLM 使用情况。"""
+        self.end_stage(
+            "synthesizer",
+            output=f"answer_source={answer_source}",
+            engine="deepseek" if llm_used else "fallback",
+            llm_used=llm_used,
+            llm_error=llm_error or "",
         )
 
     def set_final_answer(self, answer: str) -> None:
