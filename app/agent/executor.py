@@ -36,6 +36,7 @@ class Executor:
             ToolCallRecord(
                 step_id=result.get("step_id", 0),
                 action=result.get("action", ""),
+                node=result.get("node", ""),
                 tool=result.get("tool", result.get("tool_name", "")),
                 tool_name=result.get("tool_name", result.get("tool", "")),
                 description=result.get("description", ""),

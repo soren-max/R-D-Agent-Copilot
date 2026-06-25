@@ -82,8 +82,10 @@ def test_chat_api_returns_day1_acceptance_shape():
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert executor_step["engine"] == "langgraph"
+    assert executor_step["graph_name"] == "tool_execution_graph"
     assert all(
-        set(["tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
+        set(["node", "tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
         for tool_call in executor_step["tool_calls"]
     )
 
@@ -108,6 +110,14 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     trace_stages = [s.stage for s in resp.trace.steps]
     assert trace_stages == ["router", "planner", "executor"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
+    assert executor_step.engine == "langgraph"
+    assert executor_step.graph_name == "tool_execution_graph"
+    assert [call.node for call in executor_step.tool_calls] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert [call.tool_name for call in executor_step.tool_calls] == [
         "log_tool",
         "config_tool",
@@ -132,6 +142,12 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
         "git_tool",
         "rag_retriever",
     ]
+    assert [result.node for result in results] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert all(result.status == "success" for result in results)
     assert all(result.latency_ms >= 0 for result in results)
     assert all(result.source.startswith("data/") for result in results)
@@ -148,6 +164,7 @@ def test_executor_returns_failed_status_for_tool_errors():
                     {
                         "step_id": 1,
                         "action": "query_logs",
+                        "node": "log_tool_node",
                         "tool": "log_tool",
                         "tool_name": "log_tool",
                         "description": "查询日志",
@@ -180,6 +197,7 @@ def test_executor_returns_failed_status_for_tool_errors():
     result = executor.execute("订单报错", plan)[0]
 
     assert result.status == "failed"
+    assert result.node == "log_tool_node"
     assert result.result == ""
     assert result.confidence == 0.0
     assert result.source == "data/logs/order-service.log"
@@ -229,6 +247,10 @@ def test_chat_simple_qa_uses_rag_retriever_and_trace():
     assert any("\u4e00" <= c <= "\u9fff" for c in data["answer"])
 
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
+    assert data["tool_results"][0]["node"] == "rag_tool_node"
+    assert executor_step["engine"] == "langgraph"
+    assert executor_step["graph_name"] == "tool_execution_graph"
+    assert executor_step["tool_calls"][0]["node"] == "rag_tool_node"
     assert executor_step["tool_calls"][0]["tool_name"] == "rag_retriever"
     assert executor_step["tool_calls"][0]["status"] == "success"
     assert executor_step["tool_calls"][0]["source"].startswith("data/docs/")
@@ -241,6 +263,12 @@ def test_chat_complex_troubleshooting_includes_rag_evidence():
 
     assert data["route"]["type"] == "complex_troubleshooting"
     assert tool_names == ["log_tool", "config_tool", "git_tool", "rag_retriever"]
+    assert [result["node"] for result in data["tool_results"]] == [
+        "log_tool_node",
+        "config_tool_node",
+        "git_tool_node",
+        "rag_tool_node",
+    ]
     assert "初步判断" in data["answer"]
     assert "工具证据" in data["answer"]
     assert "知识库补充" in data["answer"]
@@ -257,6 +285,7 @@ def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
                     {
                         "step_id": 1,
                         "action": "retrieve_knowledge",
+                        "node": "rag_tool_node",
                         "tool": "rag_retriever",
                         "tool_name": "rag_retriever",
                         "description": "从本地知识库检索相关说明",

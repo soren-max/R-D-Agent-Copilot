@@ -32,6 +32,8 @@ class Tracer:
         stage: str,
         output: str = "",
         tool_calls: list[TraceToolCall] | None = None,
+        engine: str = "",
+        graph_name: str = "",
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -40,6 +42,8 @@ class Tracer:
             latency_ms = int((time.perf_counter() - start) * 1000)
         self._steps.append(TraceStep(
             stage=stage,
+            engine=engine,
+            graph_name=graph_name,
             output=output,
             latency_ms=latency_ms,
             tool_calls=tool_calls or [],
@@ -49,6 +53,7 @@ class Tracer:
         """记录 executor 阶段，并保存每个工具调用的状态摘要。"""
         tool_calls = [
             TraceToolCall(
+                node=result.node,
                 tool_name=result.tool_name or result.tool,
                 status=result.status,
                 latency_ms=result.latency_ms,
@@ -57,7 +62,13 @@ class Tracer:
             for result in tool_results
             if result.tool != "none"
         ]
-        self.end_stage("executor", output=output, tool_calls=tool_calls)
+        self.end_stage(
+            "executor",
+            output=output,
+            tool_calls=tool_calls,
+            engine="langgraph",
+            graph_name="tool_execution_graph",
+        )
 
     def set_final_answer(self, answer: str) -> None:
         self._final_answer = answer

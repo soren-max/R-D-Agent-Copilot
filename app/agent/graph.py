@@ -42,22 +42,27 @@ def build_execution_graph():
 
 
 def execute_log_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "log_tool", LogTool())
+    return _execute_tool_if_needed(state, "log_tool_node", "log_tool", LogTool())
 
 
 def execute_config_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "config_tool", ConfigTool())
+    return _execute_tool_if_needed(state, "config_tool_node", "config_tool", ConfigTool())
 
 
 def execute_git_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "git_tool", GitTool())
+    return _execute_tool_if_needed(state, "git_tool_node", "git_tool", GitTool())
 
 
 def execute_rag_tool_node(state: AgentGraphState) -> AgentGraphState:
-    return _execute_tool_if_needed(state, "rag_retriever", _RAGRetrieverTool())
+    return _execute_tool_if_needed(state, "rag_tool_node", "rag_retriever", _RAGRetrieverTool())
 
 
-def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -> AgentGraphState:
+def _execute_tool_if_needed(
+    state: AgentGraphState,
+    node: str,
+    tool_name: str,
+    tool: Any,
+) -> AgentGraphState:
     next_state = _copy_state(state)
     step = _find_plan_step(next_state["plan"], tool_name)
     if step is None:
@@ -71,6 +76,7 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
         next_state["tool_results"].append({
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "node": node,
             "tool": tool_name,
             "tool_name": output.get("tool_name", tool_name),
             "description": step.get("description", ""),
@@ -90,6 +96,7 @@ def _execute_tool_if_needed(state: AgentGraphState, tool_name: str, tool: Any) -
         next_state["tool_results"].append({
             "step_id": step.get("id"),
             "action": step.get("action"),
+            "node": node,
             "tool": tool_name,
             "tool_name": tool_name,
             "description": step.get("description", ""),
