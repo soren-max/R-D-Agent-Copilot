@@ -41,7 +41,7 @@ def test_planner_complex_troubleshooting_generates_three_step_plan():
     assert [step.tool for step in plan.steps] == ["log_tool", "config_tool", "git_tool"]
 
 
-def test_mock_tools_can_be_called_individually():
+def test_local_data_tools_can_be_called_individually():
     tools = [LogTool(), ConfigTool(), GitTool()]
 
     for tool in tools:
@@ -49,7 +49,7 @@ def test_mock_tools_can_be_called_individually():
         assert result["tool_name"] == tool.name
         assert result["result"]
         assert 0 <= result["confidence"] <= 1
-        assert result["source"] == "mock"
+        assert result["source"].startswith("data/")
 
 
 def test_chat_api_returns_day1_acceptance_shape():
@@ -80,7 +80,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert len(resp.tool_results) == 3
     assert [r.tool for r in resp.tool_results] == ["log_tool", "config_tool", "git_tool"]
     assert all(r.status == "success" for r in resp.tool_results)
-    assert all(r.source == "mock" for r in resp.tool_results)
+    assert all(r.source.startswith("data/") for r in resp.tool_results)
     assert any("\u4e00" <= c <= "\u9fff" for c in resp.answer)
 
     trace_stages = [s.stage for s in resp.trace.steps]
