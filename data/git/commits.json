@@ -1,0 +1,35 @@
+[
+  {
+    "commit_id": "mock-a1b2c3d",
+    "author": "Li Wei",
+    "message": "fix(order-service): harden payment timeout handling",
+    "changed_files": [
+      "services/order/checkout.py",
+      "services/order/error_handler.py",
+      "tests/order/test_payment_timeout.py"
+    ],
+    "risk_level": "medium",
+    "summary": "调整 order-service 在 payment-service timeout 时的异常处理与重试判断，可能影响订单接口 500 的返回路径。"
+  },
+  {
+    "commit_id": "mock-d4e5f6a",
+    "author": "Zhang Min",
+    "message": "feat(payment): add new payment precheck flow",
+    "changed_files": [
+      "services/payment/precheck.py",
+      "configs/payment.yaml"
+    ],
+    "risk_level": "high",
+    "summary": "新增支付预校验流程，涉及 payment-service 调用链路，可能与 enable_new_payment_flow 配置相关。"
+  },
+  {
+    "commit_id": "mock-g7h8i9j",
+    "author": "Chen Yu",
+    "message": "chore(order): update retry metrics",
+    "changed_files": [
+      "services/order/metrics.py"
+    ],
+    "risk_level": "low",
+    "summary": "补充订单重试指标埋点，主要影响观测数据，不应改变订单接口行为。"
+  }
+]
