@@ -24,10 +24,12 @@ class ToolExecutionResults(list[ToolCallRecord]):
         records: list[ToolCallRecord],
         tool_calls: list[dict[str, Any]],
         skipped_nodes: list[dict[str, Any]],
+        fallback_used: bool,
     ):
         super().__init__(records)
         self.tool_calls = tool_calls
         self.skipped_nodes = skipped_nodes
+        self.fallback_used = fallback_used
 
 
 class Executor:
@@ -48,6 +50,7 @@ class Executor:
             "tool_results": [],
             "tool_calls": [],
             "skipped_nodes": [],
+            "fallback_used": False,
             "errors": [],
         })
         records = [
@@ -63,6 +66,7 @@ class Executor:
                 source=result.get("source", ""),
                 documents=result.get("documents", []),
                 error=result.get("error", ""),
+                retry_count=result.get("retry_count", 0),
                 latency_ms=result.get("latency_ms", 0),
                 status=result.get("status", "pending"),
             )
@@ -72,4 +76,5 @@ class Executor:
             records,
             graph_result.get("tool_calls", []),
             graph_result.get("skipped_nodes", []),
+            graph_result.get("fallback_used", False),
         )

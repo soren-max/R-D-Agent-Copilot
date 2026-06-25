@@ -4,3 +4,5 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 pytest>=8.0.0
 langgraph
+openai
+python-dotenv

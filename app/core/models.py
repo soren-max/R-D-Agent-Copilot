@@ -55,6 +55,7 @@ class ToolCallRecord(BaseModel):
     source: str = ""
     documents: list[dict[str, Any]] = Field(default_factory=list)
     error: str = ""
+    retry_count: int = 0
     latency_ms: int = 0
     status: str = "pending"  # pending | success | skipped | failed
 
@@ -67,6 +68,8 @@ class TraceToolCall(BaseModel):
     node: str = ""
     tool_name: str
     status: str
+    retry_count: int = 0
+    error: str = ""
     latency_ms: int = 0
     source: str = ""
 
@@ -94,6 +97,10 @@ class TraceStep(BaseModel):
     skipped_nodes: list[TraceSkippedNode] = Field(
         default_factory=list,
         description="executor 阶段跳过的工具节点摘要",
+    )
+    fallback_used: bool = Field(
+        default=False,
+        description="executor 阶段是否启用了失败 fallback",
     )
 
 
