@@ -89,9 +89,10 @@ def test_chat_api_returns_day1_acceptance_shape():
         assert set(["status", "latency_ms", "source"]).issubset(result)
     assert data["trace"]["trace_id"]
     assert data["trace"]["final_answer"] == data["answer"]
+    assert data["evaluation"] is not None
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
-    assert trace_stages == ["router", "planner", "executor", "synthesizer"]
+    assert trace_stages == ["router", "planner", "executor", "synthesizer", "evaluation"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
