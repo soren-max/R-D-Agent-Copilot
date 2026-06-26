@@ -122,8 +122,8 @@ export default function Home() {
                 {/* Trace */}
                 <TraceViewer trace={result.trace} routeType={routeType} />
 
-                {/* Evaluation — no data from backend yet, shows "暂无数据" */}
-                <EvaluationPanel evaluation={null} />
+                {/* Evaluation */}
+                <EvaluationPanel evaluation={(result as any).evaluation} />
               </>
             )}
           </div>

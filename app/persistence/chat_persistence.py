@@ -56,6 +56,15 @@ def persist_chat_response(
             result_json=_tool_result_json(tool_result),
         )
 
+    if response.evaluation is not None:
+        repo.create_evaluation(
+            run_id=run_id,
+            overall_score=response.evaluation.overall_score,
+            metrics_json=response.evaluation.metrics.model_dump(),
+            issues_json=response.evaluation.issues,
+            suggestions_json=response.evaluation.suggestions,
+        )
+
 
 def _stage_input_json(
     stage: str,
@@ -74,6 +83,14 @@ def _stage_input_json(
             "route": response.route.model_dump(),
             "plan": response.plan.model_dump(),
             "tool_results": [result.model_dump() for result in response.tool_results],
+        }
+    if stage == "evaluation":
+        return {
+            "query": request.query,
+            "route": response.route.model_dump(),
+            "plan": response.plan.model_dump(),
+            "tool_results": [result.model_dump() for result in response.tool_results],
+            "answer": response.answer,
         }
     return {"query": request.query}
 
@@ -98,6 +115,10 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         data["answer_source"] = response.answer_source
         data["llm_used"] = response.llm_used
         data["llm_error"] = response.llm_error
+    elif trace_step.stage == "evaluation":
+        data["overall_score"] = trace_step.overall_score
+        data["evaluation_error"] = trace_step.evaluation_error
+        data["evaluation"] = response.evaluation.model_dump() if response.evaluation else None
     return data
 
 

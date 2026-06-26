@@ -157,6 +157,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# Node / frontend artifacts
+node_modules/
+apps/web/node_modules/
+*.tsbuildinfo
+apps/web/tsconfig.tsbuildinfo
+
 # Spyder project settings
 .spyderproject
 .spyproject
