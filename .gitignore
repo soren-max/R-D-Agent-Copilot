@@ -225,6 +225,8 @@ __marimo__/
 
 # R&D Agent Copilot
 REASONIX.md
+.reasonix/
+data/runs.db
 .next/
 node_modules/
 tsconfig.tsbuildinfo

@@ -13,14 +13,6 @@
   --accent: #059669;
   --accent-light: #d1fae5;
   --accent-dark: #065f46;
-  --success: #16a34a;
-  --success-bg: #dcfce7;
-  --error: #dc2626;
-  --error-bg: #fef2f2;
-  --warning: #d97706;
-  --warning-bg: #fef9c3;
-  --skip: #64748b;
-  --skip-bg: #f1f5f9;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
@@ -49,77 +41,41 @@ body {
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
 /* ── Focus ring ── */
 input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+textarea:focus-visible {
   outline: none;
-  --tw-ring-color: var(--accent);
-  --tw-ring-opacity: 0.3;
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
 /* ── Utility classes ── */
 @layer components {
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white;
+    @apply rounded-xl border border-slate-200 bg-white;
     box-shadow: var(--shadow-card);
   }
-
-  .card-elevated {
-    @apply rounded-2xl border border-slate-200 bg-white;
-    box-shadow: var(--shadow-elevated);
+  .card-header {
+    @apply border-b border-slate-100 px-5 py-3.5;
+  }
+  .card-body {
+    @apply px-5 py-4;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-700; }
+  .badge-slate  { @apply badge bg-slate-100 text-slate-600; }
+  .badge-blue   { @apply badge bg-blue-50 text-blue-700; }
+  .badge-amber  { @apply badge bg-amber-50 text-amber-700; }
 
-  .badge-green {
-    @apply badge bg-emerald-50 text-emerald-700;
-  }
-
-  .badge-slate {
-    @apply badge bg-slate-100 text-slate-600;
-  }
-
-  .badge-blue {
-    @apply badge bg-blue-50 text-blue-700;
-  }
-
-  .badge-amber {
-    @apply badge bg-amber-50 text-amber-700;
-  }
-
-  .status-dot {
-    @apply inline-block h-2 w-2 rounded-full;
-  }
-
-  .status-dot-success {
-    @apply status-dot bg-emerald-500;
-  }
-
-  .status-dot-error {
-    @apply status-dot bg-red-500;
-  }
-
-  .status-dot-skip {
-    @apply status-dot bg-slate-400;
-  }
-
-  .status-dot-pending {
-    @apply status-dot bg-amber-400;
-  }
+  .status-dot { @apply inline-block h-2 w-2 rounded-full; }
+  .dot-green  { @apply status-dot bg-emerald-500; }
+  .dot-red    { @apply status-dot bg-red-500; }
+  .dot-slate  { @apply status-dot bg-slate-400; }
+  .dot-amber  { @apply status-dot bg-amber-400; }
 }
