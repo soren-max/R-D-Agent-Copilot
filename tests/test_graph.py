@@ -117,14 +117,16 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
     response = chat_endpoint(ChatRequest(query="什么是配置中心？"))
     data = response.model_dump()
 
-    assert set(["answer", "route", "plan", "tool_results", "trace"]).issubset(data)
+    assert set(["answer", "route", "plan", "tool_results", "trace", "evaluation"]).issubset(data)
     assert data["route"]["type"] == "simple_qa"
     assert [item["tool_name"] for item in data["tool_results"]] == ["rag_retriever"]
+    assert data["evaluation"] is not None
     assert [step["stage"] for step in data["trace"]["steps"]] == [
         "router",
         "planner",
         "executor",
         "synthesizer",
+        "evaluation",
     ]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"

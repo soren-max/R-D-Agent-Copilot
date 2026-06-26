@@ -37,6 +37,12 @@ class AgentRun(Base):
         order_by="ToolCall.id",
         primaryjoin="AgentRun.run_id == ToolCall.run_id",
     )
+    evaluation: Mapped["AgentEvaluation | None"] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",
+        uselist=False,
+        primaryjoin="AgentRun.run_id == AgentEvaluation.run_id",
+    )
 
 
 class AgentStep(Base):
@@ -89,3 +95,23 @@ class ToolCall(Base):
 
     run: Mapped[AgentRun] = relationship(back_populates="tool_calls")
     step: Mapped[AgentStep | None] = relationship(back_populates="tool_calls")
+
+
+class AgentEvaluation(Base):
+    __tablename__ = "agent_evaluations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("agent_runs.run_id"),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    overall_score: Mapped[float] = mapped_column(Float, nullable=False)
+    metrics_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    issues_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    suggestions_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    run: Mapped[AgentRun] = relationship(back_populates="evaluation")

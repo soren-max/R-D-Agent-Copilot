@@ -37,6 +37,40 @@ uvicorn main:app --reload
 
 默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。
 
+## Docker Compose
+
+本地全栈 demo 可以通过 Docker Compose 启动：
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+服务地址：
+
+- 后端：http://localhost:8000
+- 前端：http://localhost:3000
+
+Compose 会启动 FastAPI 后端和 Next.js 前端，不会加入 Postgres、Redis 或真实外部 API。SQLite 继续使用 `data/runs.db`，后端容器会挂载本地 `data/` 目录。
+
+DeepSeek 默认关闭。需要启用时，只在本地 `.env` 中设置：
+
+```bash
+LLM_ENABLED=true
+DEEPSEEK_API_KEY=your_api_key_here
+```
+
+不要提交 `.env` 或真实 API Key。
+
+## CI
+
+GitHub Actions CI 包含后端和前端两个 job：
+
+- 后端安装 `requirements.txt` 并执行 `python -m pytest`
+- 前端在 `apps/web` 下执行 `npm ci` 和 `npm run lint`
+
+当前前端 `lint` 脚本执行 TypeScript typecheck。PR 需要保持 CI 通过。
+
 ## API Demo
 
 简单问答：
@@ -114,7 +148,9 @@ Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.
 
 Day11 新增 rule-based Agent 执行质量评估，评分维度包括工具成功率、Trace 完整性、RAG 命中、回答证据性和执行耗时。
 
-当前 Evaluation v1 不使用 LLM 评审，不调用 DeepSeek，保证本地测试稳定且不影响 `/chat` 主流程。
+`/chat` 会返回 `evaluation`，并在 trace 中追加 `evaluation` 阶段。评估结果会随 run 一起持久化，后续可通过 `GET /runs/{run_id}` 查询。前端会展示 Agent 质量评分、指标明细、发现的问题和优化建议。
+
+当前 Evaluation v1 使用 rule-based evaluator，不使用 LLM judge，不依赖真实 DeepSeek API，保证本地测试稳定。
 
 ## LangGraph Execution Layer
 

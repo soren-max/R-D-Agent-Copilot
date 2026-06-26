@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from app.persistence.database import init_db
-from app.persistence.models import AgentRun, AgentStep, ToolCall
+from app.persistence.models import AgentEvaluation, AgentRun, AgentStep, ToolCall
 
 
 def _serialize_datetime(value: datetime | None) -> str | None:
@@ -28,6 +28,9 @@ def _run_to_dict(run: AgentRun, include_children: bool = False) -> dict[str, Any
     if include_children:
         data["steps"] = [_step_to_dict(step) for step in run.steps]
         data["tool_calls"] = [_tool_call_to_dict(tool_call) for tool_call in run.tool_calls]
+        data["evaluation"] = _evaluation_to_dict(run.evaluation) if run.evaluation else None
+    else:
+        data["evaluation_score"] = run.evaluation.overall_score if run.evaluation else None
     return data
 
 
@@ -60,6 +63,18 @@ def _tool_call_to_dict(tool_call: ToolCall) -> dict[str, Any]:
         "latency_ms": tool_call.latency_ms,
         "result_json": tool_call.result_json,
         "created_at": _serialize_datetime(tool_call.created_at),
+    }
+
+
+def _evaluation_to_dict(evaluation: AgentEvaluation) -> dict[str, Any]:
+    return {
+        "id": evaluation.id,
+        "run_id": evaluation.run_id,
+        "overall_score": evaluation.overall_score,
+        "metrics": evaluation.metrics_json,
+        "issues": evaluation.issues_json,
+        "suggestions": evaluation.suggestions_json,
+        "created_at": _serialize_datetime(evaluation.created_at),
     }
 
 
@@ -159,12 +174,37 @@ class RunRepository:
             session.commit()
             return _tool_call_to_dict(tool_call)
 
+    def create_evaluation(
+        self,
+        *,
+        run_id: str,
+        overall_score: float,
+        metrics_json: dict[str, Any],
+        issues_json: list[str],
+        suggestions_json: list[str],
+    ) -> dict[str, Any]:
+        with self._session_factory() as session:
+            evaluation = AgentEvaluation(
+                run_id=run_id,
+                overall_score=overall_score,
+                metrics_json=metrics_json,
+                issues_json=issues_json,
+                suggestions_json=suggestions_json,
+            )
+            session.add(evaluation)
+            session.commit()
+            return _evaluation_to_dict(evaluation)
+
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         with self._session_factory() as session:
             statement = (
                 select(AgentRun)
                 .where(AgentRun.run_id == run_id)
-                .options(selectinload(AgentRun.steps), selectinload(AgentRun.tool_calls))
+                .options(
+                    selectinload(AgentRun.steps),
+                    selectinload(AgentRun.tool_calls),
+                    selectinload(AgentRun.evaluation),
+                )
             )
             run = session.execute(statement).scalar_one_or_none()
             if run is None:
@@ -173,6 +213,11 @@ class RunRepository:
 
     def list_runs(self, limit: int = 20) -> list[dict[str, Any]]:
         with self._session_factory() as session:
-            statement = select(AgentRun).order_by(AgentRun.created_at.desc(), AgentRun.id.desc()).limit(limit)
+            statement = (
+                select(AgentRun)
+                .options(selectinload(AgentRun.evaluation))
+                .order_by(AgentRun.created_at.desc(), AgentRun.id.desc())
+                .limit(limit)
+            )
             runs = session.execute(statement).scalars().all()
             return [_run_to_dict(run) for run in runs]
