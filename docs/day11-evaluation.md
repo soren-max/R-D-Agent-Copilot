@@ -34,3 +34,13 @@ Trace Viewer 如果收到 `evaluation` stage，会在时间线中显示 `Evaluat
 ## 5. Interview Explanation
 
 “第十一天我加入了 Evaluation v1。这个模块不会参与 Agent 决策，而是在回答生成之后，根据工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时给出质量评分。它的价值是让系统不只是能回答，还能量化回答质量，为后续优化 Prompt、工具调用和知识库提供依据。当前采用 rule-based 方式，保证可解释和可测试，后续可以扩展为 LLM-as-a-Judge 或人工评审。”
+
+## 6. Boundary
+
+Evaluation v1 不替代真实线上评估体系，也不声称能完整判断排障结论是否绝对正确。它当前只基于本地样例工具结果、trace 完整性和回答证据性进行规则评分，目标是为 MVP 提供可解释的质量信号。
+
+后续如果接入真实企业 API，可以增加：
+
+- LLM Judge：对回答是否充分引用证据、建议是否合理进行语义评估。
+- Human Review：让研发同学标注是否接受结论。
+- Case Regression：把典型故障沉淀成评测集，持续检查 Agent 改动是否退化。

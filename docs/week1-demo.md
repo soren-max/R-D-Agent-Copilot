@@ -1,4 +1,6 @@
-# Week1 Demo Guide
+# Demo Guide
+
+本 demo 使用本地样例日志、配置、Git 和知识库数据，适合无真实企业 API、无 DeepSeek API Key 的本地验收和面试展示。
 
 ## Demo Case 1：简单问答
 
@@ -17,6 +19,7 @@ curl -X POST http://127.0.0.1:8000/chat \
 - `trace.executor.engine = langgraph`
 - `answer_source = fallback` 或 `llm`
 - `trace.executor.skipped_nodes` 包含 log/config/git 节点
+- 前端 Trace Viewer 展示 RAG 工具结果和跳过的工具节点
 
 ## Demo Case 2：复杂排障
 
@@ -35,6 +38,7 @@ curl -X POST http://127.0.0.1:8000/chat \
 - trace 记录 LangGraph node
 - answer 包含初步判断、工具证据、建议处理方式
 - `trace.executor.engine = langgraph`
+- Evaluation Panel 展示工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时评分
 
 ## Demo Case 3：LLM fallback
 
@@ -77,6 +81,33 @@ python scripts/demo_week1.py
 - tool_names
 - trace.executor.engine
 - trace.synthesizer.engine
+
+## Frontend Demo
+
+启动后端：
+
+```bash
+uvicorn main:app --reload
+```
+
+启动前端：
+
+```bash
+cd apps/web
+npm run dev
+```
+
+访问：
+
+```text
+http://127.0.0.1:3000
+```
+
+建议演示顺序：
+
+1. 输入“什么是配置中心？”，展示 simple QA、RAG 结果和 skipped nodes。
+2. 输入“为什么订单接口报500？”，展示复杂排障、工具结果、Trace Viewer 和 Evaluation Panel。
+3. 说明 DeepSeek 默认关闭，系统仍能通过 fallback answer 完成演示。
 
 ## 面试讲解话术
 
