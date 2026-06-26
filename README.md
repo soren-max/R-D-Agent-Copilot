@@ -96,9 +96,17 @@ Day2 提供一组确定性的本地排障样例数据，作为后续工具系统
 
 ## API Adapter Layer
 
-Adapter 层用于隔离真实系统 API 和本地 mock 数据来源，向后续工具改造提供统一的数据访问边界。当前实现 `LocalLogAdapter`、`LocalConfigAdapter` 和 `LocalGitAdapter` 骨架，分别对应日志平台、配置中心和 Git 平台数据源。
+Adapter 层用于隔离真实系统 API 和本地 mock 数据来源，向后续工具改造提供统一的数据访问边界。tools 不直接绑定具体数据源，而是通过 Adapter 访问日志、配置和 Git 数据。
 
-当前 Adapter 仍只面向本地确定性 mock 数据，不调用真实外部 API，不参与 Agent 推理、Planner 输出修改、Trace 写入或最终回答生成。后续可在保持工具契约稳定的前提下替换为真实日志平台、配置中心和 Git 平台 API。
+当前实现 `LocalLogAdapter`、`LocalConfigAdapter` 和 `LocalGitAdapter`，仍只面向本地确定性 mock 数据，不调用真实外部 API，不参与 Agent 推理、Planner 输出修改、Trace 写入或最终回答生成。后续可在保持工具契约稳定的前提下接入 `RealLogAPIAdapter`、`RealConfigCenterAdapter` 和 `RealGitAPIAdapter`。
+
+这是第二周企业级改造重点之一：让 demo 继续可复现，同时保留未来替换真实系统 API 的扩展边界。更多说明见 `docs/day9-adapter-architecture.md`。
+
+## Run / Trace Persistence
+
+Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.db`，也可通过 `DATABASE_URL=sqlite:///data/runs.db` 配置。
+
+当前持久化层保存 Agent 执行 run、step 和 tool_call 数据。本 PR 仅提供数据库模型和 repository，后续会接入 `/chat` 执行流程和查询 API。
 
 ## LangGraph Execution Layer
 

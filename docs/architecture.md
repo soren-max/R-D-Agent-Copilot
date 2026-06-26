@@ -45,7 +45,10 @@ LangGraph：
 只负责 Executor 内部工具节点编排、条件执行、retry、fallback。它不替代 Router 或 Planner。
 
 Tools：
-只读取本地确定性样例数据，包括日志、配置和 Git 提交记录。Tools 不调用 LLM，不访问真实外部系统。
+通过 Adapter 层访问日志、配置和 Git 提交记录。当前 Adapter 实现仍读取本地确定性样例数据，保持 demo 可复现。Tools 不调用 LLM，不访问真实外部系统，不生成最终答案。
+
+API Adapter：
+封装系统数据访问边界，当前包括 `LocalLogAdapter`、`LocalConfigAdapter` 和 `LocalGitAdapter`。Adapter 返回统一 `AdapterResult`，用于隔离本地 mock 数据和未来真实 API。后续可以扩展 `RealLogAPIAdapter`、`RealConfigCenterAdapter` 和 `RealGitAPIAdapter`，但不应改变 Router、Planner、Executor、LangGraph、RAG、Trace 或前端 Trace Viewer 的职责。
 
 RAG：
 只做本地知识库检索，返回相关文档片段和来源，不生成最终答案。
@@ -61,4 +64,5 @@ Trace：
 - 先确定性闭环，后引入 LLM：先保证 Router、Planner、Executor、Tools、Trace 能稳定运行，再把 LLM 放到最末端做语言生成。
 - 先纯 Python 验证 Agent 流程，再接 LangGraph：Day1 先验证 Agent 主链路，Day4 以后再把 Executor 内部工具编排迁移到 LangGraph。
 - LLM 只负责语言生成，避免影响工具执行稳定性：DeepSeek 不参与工具选择，不修改 Planner 输出，也不能绕过 LangGraph。
+- Adapter 隔离数据源，保持 Agent 主链路稳定：Tools 面向统一 AdapterResult，当前使用 LocalAdapter 保证本地 demo 和测试稳定，未来替换真实系统 API 时不需要改动 Router、Planner、LangGraph 或前端 Trace Viewer。
 - 每个 PR 单独模块，方便 review 和回滚：工具数据、RAG、LangGraph、DeepSeek、文档和回归测试都按清晰目标拆分。
