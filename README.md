@@ -114,9 +114,9 @@ Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.
 
 Day11 新增 rule-based Agent 执行质量评估，评分维度包括工具成功率、Trace 完整性、RAG 命中、回答证据性和执行耗时。
 
-`/chat` 会返回 `evaluation`，并在 trace 中追加 `evaluation` 阶段。评估结果会随 run 一起持久化，后续可通过 `GET /runs/{run_id}` 查询。
+`/chat` 会返回 `evaluation`，并在 trace 中追加 `evaluation` 阶段。评估结果会随 run 一起持久化，后续可通过 `GET /runs/{run_id}` 查询。前端会展示 Agent 质量评分、指标明细、发现的问题和优化建议。
 
-当前 Evaluation v1 不使用 LLM judge，不调用 DeepSeek，保证本地测试稳定。
+当前 Evaluation v1 使用 rule-based evaluator，不使用 LLM judge，不依赖真实 DeepSeek API，保证本地测试稳定。
 
 ## LangGraph Execution Layer
 

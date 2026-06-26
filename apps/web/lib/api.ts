@@ -57,6 +57,8 @@ export type TraceStep = {
   tool_calls?: TraceToolCall[];
   skipped_nodes?: TraceSkippedNode[];
   fallback_used?: boolean;
+  overall_score?: number | null;
+  evaluation_error?: string | null;
 };
 
 export type TraceData = {
@@ -65,7 +67,23 @@ export type TraceData = {
   final_answer?: string;
 };
 
+export type EvaluationMetrics = {
+  tool_success_rate?: number;
+  trace_completeness?: number;
+  rag_relevance?: number;
+  answer_groundedness?: number;
+  latency_score?: number;
+};
+
+export type EvaluationResult = {
+  overall_score?: number;
+  metrics?: EvaluationMetrics;
+  issues?: string[];
+  suggestions?: string[];
+};
+
 export type ChatResponse = {
+  run_id?: string;
   answer: string;
   answer_source: "fallback" | "llm" | string;
   llm_used: boolean;
@@ -74,6 +92,7 @@ export type ChatResponse = {
   plan: PlanResult;
   tool_results: ToolResult[];
   trace?: TraceData;
+  evaluation?: EvaluationResult | null;
 };
 
 export async function postChat(query: string): Promise<ChatResponse> {

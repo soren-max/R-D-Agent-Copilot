@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { AppHeader } from "@/components/app-header";
+import { EvaluationPanel } from "@/components/evaluation-panel";
 import { PlanViewer } from "@/components/plan-viewer";
 import { ToolResultCard } from "@/components/tool-result-card";
 import { TraceViewer } from "@/components/trace-viewer";
@@ -129,6 +130,8 @@ export default function Home() {
                 <p className="mt-3 text-xs text-slate-500">LLM 状态：{result.llm_error}</p>
               ) : null}
             </section>
+
+            <EvaluationPanel evaluation={result.evaluation} />
 
             <PlanViewer steps={result.plan?.steps} routeType={result.route?.type} />
 
