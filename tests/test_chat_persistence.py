@@ -54,6 +54,7 @@ def test_agent_steps_include_pipeline_stages():
         "planner",
         "executor",
         "synthesizer",
+        "evaluation",
     ]
     executor_step = [step for step in run["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
@@ -94,6 +95,7 @@ def test_llm_fallback_saves_synthesizer_step(monkeypatch):
     assert synthesizer_step["engine"] == "fallback"
     assert synthesizer_step["output_json"]["answer_source"] == "fallback"
     assert synthesizer_step["output_json"]["llm_error"] == "missing_api_key"
+    assert run["evaluation"] is not None
 
 
 def test_database_write_failure_does_not_break_chat(monkeypatch):

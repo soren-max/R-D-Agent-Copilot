@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.eval.schemas import EvaluationResult
+
 
 # ── Router ──────────────────────────────────────────────────────────
 
@@ -104,6 +106,14 @@ class TraceStep(BaseModel):
         default=False,
         description="executor 阶段是否启用了失败 fallback",
     )
+    overall_score: float | None = Field(
+        default=None,
+        description="evaluation 阶段的总体评分",
+    )
+    evaluation_error: str = Field(
+        default="",
+        description="evaluation 阶段的脱敏错误标记",
+    )
 
 
 class TraceData(BaseModel):
@@ -115,6 +125,10 @@ class TraceData(BaseModel):
     persistence_error: str | None = Field(
         default=None,
         description="持久化失败时的脱敏错误标记",
+    )
+    evaluation_error: str | None = Field(
+        default=None,
+        description="评估失败时的脱敏错误标记",
     )
 
 
@@ -140,3 +154,7 @@ class ChatResponse(BaseModel):
         default_factory=list, description="工具执行结果列表"
     )
     trace: TraceData = Field(description="全链路追踪数据")
+    evaluation: EvaluationResult | None = Field(
+        default=None,
+        description="Agent 执行质量评估结果",
+    )
