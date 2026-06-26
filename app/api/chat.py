@@ -10,6 +10,7 @@ from fastapi import APIRouter
 
 from app.agent.pipeline import run_pipeline
 from app.core.models import ChatRequest, ChatResponse
+from app.persistence.chat_persistence import persist_chat_response
 
 router = APIRouter(tags=["chat"])
 
@@ -21,4 +22,12 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
       Router → Planner → Executor → Synthesizer → Trace
     返回中文回答 + 全链路追踪数据。
     """
-    return run_pipeline(body)
+    response = run_pipeline(body)
+    response.run_id = response.trace.trace_id
+
+    try:
+        persist_chat_response(body, response)
+    except Exception:
+        response.trace.persistence_error = "persistence_write_failed"
+
+    return response
