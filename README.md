@@ -121,6 +121,12 @@ DEEPSEEK_API_KEY=your_api_key_here
 
 不要提交 `.env` 或真实 API Key。
 
+## DeepSeek Answer Synthesizer
+
+DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
+
+DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，系统会自动使用 fallback answer，并在响应和 trace 中记录 `answer_source=fallback`、`llm_used=false` 和对应错误信息。
+
 ## Demo Queries
 
 简单问答：
