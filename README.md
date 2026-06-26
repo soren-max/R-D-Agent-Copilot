@@ -1,32 +1,89 @@
-# R-D-Agent-Copilot
+# R&D Agent Copilot
 
-研发排障智能助手 / Agent 系统 / 工具调用。
+AI 研发排障智能助手
 
-## Current Status
+## Project Overview
 
-Current release target: v0.1.0
+R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持知识问答、日志排查、配置差异分析、Git 变更定位和中文排障报告生成。
 
-Status: Week1 backend Agent MVP completed
+项目当前定位是可复现、可测试、可追踪的后端 + Trace Viewer MVP。它用本地样例数据模拟研发排障链路，在不接入真实企业系统的前提下展示一个 Agent 从问题理解、任务规划、工具执行、证据记录到最终回答和质量评估的完整流程。
 
-Next milestone: Trace Viewer + Evaluation + API adapter abstraction
+## Why This Project
 
-## Week2 Frontend
+微服务系统排障通常不是单点问题，而是跨日志、配置、代码变更和知识库的证据收集过程：
 
-`apps/web` 是 Trace Viewer 前端工程，使用 Next.js、TypeScript 和 TailwindCSS。
+- 微服务系统排障链路长，问题定位需要跨多个信息源。
+- 日志、配置、代码变更分散，人工切换上下文成本高。
+- 人工排查效率低，且结论很难稳定复现。
+- Agent 系统不能只给答案，还需要可追踪、可回退、可评估。
 
-当前 PR 仅新增前端骨架，包含 Chat、Agent 执行结果和 Trace 执行链路的静态占位。后续会接入 `POST /chat` 和 Trace Viewer 展示，不在前端暴露 API Key。
+本项目的核心思路是：让大模型只负责最终表达，Router、Planner、工具选择和执行链路保持确定性，从而兼顾可演示性、可测试性和工程边界。
 
-## Week1 Milestone
+## Core Features
 
-- Day1 Agent MVP：完成 `POST /chat`、Router、Planner、Executor、Tools、Trace、Response 的确定性闭环。
-- Day2 Local Tools：用本地样例数据实现日志、配置和 Git 变更工具。
-- Day3 Local RAG：基于 `data/docs/` 实现本地知识库检索。
-- Day4 LangGraph Execution Layer：把工具执行编排放入 Executor 内部的 LangGraph layer。
-- Day5 Conditional Execution / Retry / Fallback：支持条件工具执行、失败重试和工具 fallback。
-- Day6 DeepSeek Answer Synthesizer：DeepSeek 只用于最终中文回答生成，不控制 Router、Planner 或 Tool Selection。
-- Day7 Regression / Docs / Release Checklist：补齐第一周回归验收、架构文档和 demo 说明。
+- Router：将用户问题分流为简单问答或复杂排障。
+- Planner：根据问题类型生成结构化任务计划。
+- LangGraph Executor：在 Executor 内部编排工具节点，支持条件执行、retry、fallback 和节点 trace。
+- Tools：提供 `log_tool`、`config_tool`、`git_tool` 和本地 `rag_retriever`。
+- API Adapter：隔离本地样例数据和未来真实系统 API。
+- DeepSeek Answer Synthesizer：可选使用 DeepSeek 生成最终中文回答，失败时自动 fallback。
+- Trace Viewer：前端可视化展示 Router、Planner、Executor、Synthesizer 和 Evaluation 执行链路。
+- Run / Trace Persistence：使用 SQLite 持久化历史 run、step 和 tool call，支持链路回查。
+- Evaluation v1：基于工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时给出质量评分。
+- Docker + CI：提供 Docker Compose 本地全栈启动和 GitHub Actions CI。
+
+## Architecture
+
+```text
+User Query
+-> Router
+-> Planner
+-> LangGraph Executor
+-> Tools / RAG
+-> Trace
+-> Answer Synthesizer
+-> Evaluation
+-> Response / Trace Viewer
+```
+
+关键边界：
+
+- DeepSeek 不控制 Router、Planner 或 Tool Selection，只在 Answer Synthesizer 阶段基于已有证据生成中文回答。
+- Tools 当前通过 LocalAdapter 读取本地样例日志、配置、Git 和知识库数据，后续可替换为真实企业 API Adapter。
+- Trace 记录每个执行阶段，包括 stage 输出、latency、tool calls、skipped nodes、retry、fallback 和 synthesizer 元数据。
+- Evaluation 在回答生成之后运行，不参与 Agent 决策，只用于质量评估和展示。
+
+更多架构说明见 [docs/architecture.md](docs/architecture.md)。
+
+## Tech Stack
+
+Backend:
+
+- FastAPI
+- Python
+- LangGraph
+- SQLite
+- SQLAlchemy
+- Pytest
+
+LLM:
+
+- DeepSeek API with fallback
+
+Frontend:
+
+- Next.js
+- TypeScript
+- TailwindCSS
+
+DevOps:
+
+- Docker Compose
+- GitHub Actions
 
 ## Quick Start
+
+后端：
 
 ```bash
 python -m venv .venv
@@ -35,25 +92,27 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。
+前端：
 
-## Docker Compose
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-本地全栈 demo 可以通过 Docker Compose 启动：
+Docker：
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-服务地址：
+默认地址：
 
-- 后端：http://localhost:8000
-- 前端：http://localhost:3000
+- Backend: http://localhost:8000
+- Frontend: http://localhost:3000
 
-Compose 会启动 FastAPI 后端和 Next.js 前端，不会加入 Postgres、Redis 或真实外部 API。SQLite 继续使用 `data/runs.db`，后端容器会挂载本地 `data/` 目录。
-
-DeepSeek 默认关闭。需要启用时，只在本地 `.env` 中设置：
+默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。开启 DeepSeek 时，只在本地 `.env` 中设置：
 
 ```bash
 LLM_ENABLED=true
@@ -62,16 +121,13 @@ DEEPSEEK_API_KEY=your_api_key_here
 
 不要提交 `.env` 或真实 API Key。
 
-## CI
+## DeepSeek Answer Synthesizer
 
-GitHub Actions CI 包含后端和前端两个 job：
+DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
 
-- 后端安装 `requirements.txt` 并执行 `python -m pytest`
-- 前端在 `apps/web` 下执行 `npm ci` 和 `npm run lint`
+DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，系统会自动使用 fallback answer，并在响应和 trace 中记录 `answer_source=fallback`、`llm_used=false` 和对应错误信息。
 
-当前前端 `lint` 脚本执行 TypeScript typecheck。PR 需要保持 CI 通过。
-
-## API Demo
+## Demo Queries
 
 简单问答：
 
@@ -81,6 +137,14 @@ curl -X POST http://127.0.0.1:8000/chat \
   -d '{"query":"什么是配置中心？"}'
 ```
 
+预期效果：
+
+- Router 输出 `simple_qa`
+- Planner 生成知识检索计划
+- RAG 返回本地知识库片段
+- Trace Viewer 展示 log/config/git 节点被跳过
+- 最终返回中文知识问答
+
 复杂排障：
 
 ```bash
@@ -89,160 +153,54 @@ curl -X POST http://127.0.0.1:8000/chat \
   -d '{"query":"为什么订单接口报500？"}'
 ```
 
-本地 demo 脚本：
+预期效果：
 
-```bash
-python scripts/demo_week1.py
-```
+- Router 输出 `complex_troubleshooting`
+- Planner 生成日志、配置、Git 和 RAG 检索计划
+- LangGraph Executor 执行工具节点并记录 trace
+- Answer Synthesizer 汇总证据生成中文排障报告
+- Evaluation v1 返回质量评分、问题和建议
 
-更多说明见 `docs/architecture.md` 和 `docs/week1-demo.md`。
+更多 demo 步骤见 [docs/week1-demo.md](docs/week1-demo.md)。
 
-## Day1 MVP
+## Screenshots / Demo
 
-Day1 只实现最小可运行 Agent 闭环：
+当前仓库暂未提交截图，避免编造展示素材。建议后续补充：
 
-User -> Router -> Planner -> Executor -> Tools -> Trace -> Response
+- Chat UI
+- Trace Viewer
+- Evaluation Panel
 
-当前范围：
+## Current Scope
 
-- `POST /chat`
-- 规则 Router：`simple_qa` / `complex_troubleshooting`
-- Planner：简单问答单步计划，复杂排障三步计划
-- Mock Tools：`log_tool`、`config_tool`、`git_tool`
-- Executor：按 Planner 步骤调用工具
-- Trace：每次请求返回完整内存 Trace
+当前项目是可复现 MVP：
 
-Day1 不包含 LangGraph、RAG、真实 LLM、前端、数据库、Redis 或外部 API。
+- 使用本地样例日志、配置、Git 数据和知识库文档。
+- 使用 LocalAdapter 隔离数据访问，保留未来接入真实 API 的扩展边界。
+- 支持 DeepSeek 可选接入，默认关闭并自动 fallback。
+- 不包含真实日志平台、真实配置中心、真实 Git API 或真实企业系统 API。
+- 不包含 Redis、Postgres 或复杂生产部署方案。
 
-## 本地样例数据说明
+## Future Work
 
-Day2 提供一组确定性的本地排障样例数据，作为后续工具系统强化的数据来源：
+- RealLogAPIAdapter
+- RealConfigCenterAdapter
+- RealGitAPIAdapter
+- Trace 历史页
+- LLM Judge / Human Review
+- 权限控制
+- 更完整的部署方案
 
-- `data/logs/order-service.log`：模拟订单接口 500、payment-service timeout、trace_id 和服务名等日志线索。
-- `data/configs/dev.json` / `data/configs/prod.json`：模拟不同环境配置差异，包括支付超时、订单重试次数和新支付流程开关。
-- `data/git/commits.json`：模拟最近提交记录，包含提交 ID、作者、变更文件、风险等级和中文友好的摘要。
+## CI
 
-这些数据仅用于本地确定性排障演示，不接入真实外部 API、数据库、RAG 或 LLM。
+GitHub Actions CI 包含后端和前端两个 job：
 
-## Local Knowledge Base
+- 后端安装 `requirements.txt` 并执行 `python -m pytest`
+- 前端在 `apps/web` 下执行 `npm ci` 和 `npm run lint`
 
-`data/docs/` 存放本地知识库样例文档，覆盖配置中心、服务日志、接口异常排查流程和订单服务 FAQ。Day3 会基于这些文档实现轻量 RAG 检索。当前文档仅用于模拟研发排障场景，不接入外部知识库或真实公司数据。
+PR 需要保持 CI 通过。
 
-## API Adapter Layer
+## Interview Materials
 
-Adapter 层用于隔离真实系统 API 和本地 mock 数据来源，向后续工具改造提供统一的数据访问边界。tools 不直接绑定具体数据源，而是通过 Adapter 访问日志、配置和 Git 数据。
-
-当前实现 `LocalLogAdapter`、`LocalConfigAdapter` 和 `LocalGitAdapter`，仍只面向本地确定性 mock 数据，不调用真实外部 API，不参与 Agent 推理、Planner 输出修改、Trace 写入或最终回答生成。后续可在保持工具契约稳定的前提下接入 `RealLogAPIAdapter`、`RealConfigCenterAdapter` 和 `RealGitAPIAdapter`。
-
-这是第二周企业级改造重点之一：让 demo 继续可复现，同时保留未来替换真实系统 API 的扩展边界。更多说明见 `docs/day9-adapter-architecture.md`。
-
-## Run / Trace Persistence
-
-Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.db`，也可通过 `DATABASE_URL=sqlite:///data/runs.db` 配置。
-
-`/chat` 执行完成后会持久化 Agent run、step 和 tool_call 数据，`run_id` 与 `trace.trace_id` 保持一致，便于后续前端 Trace Viewer 和查询 API 对齐历史执行链路。
-
-后续可以通过查询 API 读取历史 run 和完整执行链路。
-
-## Evaluation v1
-
-Day11 新增 rule-based Agent 执行质量评估，评分维度包括工具成功率、Trace 完整性、RAG 命中、回答证据性和执行耗时。
-
-`/chat` 会返回 `evaluation`，并在 trace 中追加 `evaluation` 阶段。评估结果会随 run 一起持久化，后续可通过 `GET /runs/{run_id}` 查询。前端会展示 Agent 质量评分、指标明细、发现的问题和优化建议。
-
-当前 Evaluation v1 使用 rule-based evaluator，不使用 LLM judge，不依赖真实 DeepSeek API，保证本地测试稳定。
-
-## LangGraph Execution Layer
-
-Router 和 Planner 仍由项目自定义实现。LangGraph 只用于 Executor 内部工具执行编排，不替代现有意图分类和任务规划。当前 graph 节点包括 `log_tool_node`、`config_tool_node`、`git_tool_node`、`rag_tool_node`。每个节点执行结果会进入 trace，方便后续 Trace Viewer 展示。
-
-## Day5 LangGraph Execution
-
-Day5 在 Executor 内部增强 LangGraph 工具编排能力：
-
-- 根据 Planner 输出的 `plan.steps[].tool` 条件执行工具节点。
-- 对临时失败工具最多重试 1 次，并在失败后继续执行后续工具。
-- 在 trace 中记录 `tool_calls`、`skipped_nodes`、`retry_count`、`error` 和 `fallback_used`。
-- 保持 Router、Planner、Executor、Tools、Trace、Response 的既有职责边界。
-
-运行测试：
-
-```bash
-python -m pytest
-```
-
-运行本地服务：
-
-```bash
-uvicorn main:app --reload
-```
-
-运行 demo 请求：
-
-```bash
-python scripts/demo_day5.py
-```
-
-也可以直接请求复杂排障示例：
-
-```bash
-curl -X POST http://127.0.0.1:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query":"为什么订单接口报500？"}'
-```
-
-当前 Day5 范围不包含 DeepSeek、真实 LLM、前端、数据库或外部 API。
-
-更多验收说明见 `docs/day5-langgraph-demo.md`。
-
-## DeepSeek API Configuration
-
-Day6 开始支持 DeepSeek API 配置和 OpenAI-compatible client 封装。LLM 默认关闭，仅作为后续最终回答生成器使用，不控制 Router、Planner、Tool 执行或 LangGraph 编排。
-
-在 `.env` 中按需配置：
-
-```bash
-LLM_ENABLED=true
-LLM_PROVIDER=deepseek
-LLM_MODEL=deepseek-v4-flash
-LLM_BASE_URL=https://api.deepseek.com
-DEEPSEEK_API_KEY=your_api_key_here
-```
-
-默认 `LLM_ENABLED=false`，没有 API Key 时项目仍可运行。真实 API Key 不应写入代码或提交到仓库。
-
-## DeepSeek Answer Synthesizer
-
-DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
-
-LLM 默认关闭。开启方式是在 `.env` 中设置：
-
-```bash
-LLM_ENABLED=true
-DEEPSEEK_API_KEY=your_key_here
-```
-
-如果 LLM 关闭、API Key 缺失、网络异常或模型调用失败，`/chat` 会自动回退到 rule-based fallback answer，并在响应中返回 `answer_source=fallback`、`llm_used=false` 和对应 `llm_error`。测试不依赖真实 DeepSeek API。
-
-更多本地验收步骤见 `docs/day6-deepseek-demo.md`。
-
-## Run
-
-```bash
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-## Test
-
-```bash
-python -m pytest
-```
-
-## Example
-
-```bash
-curl -X POST http://127.0.0.1:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"query":"为什么订单接口报500？"}'
-```
+- [docs/project-pitch.md](docs/project-pitch.md)：简历和面试介绍话术。
+- [docs/interview-notes.md](docs/interview-notes.md)：架构讲解、演示路径和边界说明。
