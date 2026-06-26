@@ -30,6 +30,24 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 
 该变量只用于后续 `/chat` API 集成。不要在前端环境变量中放置 API Key 或任何密钥。
 
+## Docker
+
+前端容器由仓库根目录的 `docker-compose.yml` 构建和启动：
+
+```bash
+cd ../..
+cp .env.example .env
+docker compose up --build
+```
+
+默认访问：
+
+```text
+http://127.0.0.1:3000
+```
+
+容器内使用生产模式启动 Next.js，并通过 `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` 访问本地 FastAPI 后端。
+
 ## Trace Viewer
 
 Trace Viewer 用于展示 Agent 执行链路，帮助演示一次 `/chat` 请求如何经过 Router、Planner、LangGraph Executor 和 Synthesizer。
