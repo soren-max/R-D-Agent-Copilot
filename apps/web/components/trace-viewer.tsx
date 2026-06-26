@@ -5,231 +5,140 @@ type TraceViewerProps = {
   routeType?: string;
 };
 
-const stageLabels: Record<string, { en: string; zh: string }> = {
-  router: { en: "Router", zh: "路由器" },
-  planner: { en: "Planner", zh: "任务规划" },
-  executor: { en: "Executor", zh: "执行器" },
-  synthesizer: { en: "Synthesizer", zh: "回答生成器" },
+const stageLabels: Record<string, string> = {
+  router: "Router / 路由器",
+  planner: "Planner / 任务规划",
+  executor: "Executor / LangGraph 执行器",
+  synthesizer: "Synthesizer / 回答生成器",
 };
 
-function stageLabel(stage: string | undefined) {
-  if (!stage) {
-    return "未知阶段";
-  }
-  const label = stageLabels[stage];
-  return label ? `${label.en} / ${label.zh}` : stage;
+function stageColor(stage: string | undefined): string {
+  if (stage === "router") return "border-l-emerald-400";
+  if (stage === "planner") return "border-l-blue-400";
+  if (stage === "executor") return "border-l-amber-400";
+  if (stage === "synthesizer") return "border-l-violet-400";
+  return "border-l-slate-300";
 }
 
-function routeLabel(routeType: string | undefined) {
-  if (routeType === "simple_qa") {
-    return "simple_qa / 简单问答";
-  }
-  if (routeType === "complex_troubleshooting") {
-    return "complex_troubleshooting / 复杂排障";
-  }
-  return routeType || "未知类型";
+function engineLabel(e: string | undefined) {
+  if (e === "deepseek") return "DeepSeek";
+  if (e === "langgraph") return "LangGraph";
+  if (e === "fallback") return "规则兜底";
+  return e || "—";
 }
 
-function statusLabel(status: string | undefined) {
-  if (status === "success") {
-    return "成功";
-  }
-  if (status === "failed") {
-    return "失败";
-  }
-  if (status === "skipped") {
-    return "已跳过";
-  }
-  return status || "未知状态";
+function statusLabel(s: string | undefined) {
+  if (s === "success") return "成功";
+  if (s === "failed") return "失败";
+  if (s === "skipped") return "已跳过";
+  return s || "未知";
 }
 
-function engineLabel(engine: string | undefined) {
-  if (engine === "deepseek") {
-    return "DeepSeek";
-  }
-  if (engine === "fallback") {
-    return "规则兜底";
-  }
-  if (engine === "langgraph") {
-    return "LangGraph";
-  }
-  return engine || "未记录";
-}
-
-function reasonLabel(reason: string | undefined) {
-  if (reason === "tool_not_in_plan") {
-    return "工具不在计划中";
-  }
-  return reason || "未记录原因";
-}
-
-function findStep(trace: TraceData | undefined, stage: string) {
-  return trace?.steps?.find((step) => step.stage === stage);
-}
-
-function MetricCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-2 break-words text-sm font-semibold text-slate-950">{value}</p>
-    </div>
-  );
+function statusDot(s: string | undefined) {
+  if (s === "success") return "bg-emerald-500";
+  if (s === "failed") return "bg-red-500";
+  if (s === "skipped") return "bg-slate-300";
+  return "bg-slate-300";
 }
 
 function TimelineStep({ step, index }: { step: TraceStep; index: number }) {
   return (
-    <article className="relative rounded-md border border-slate-200 bg-white p-4">
+    <div className={`border-l-2 ${stageColor(step.stage)} pl-4 pb-5 last:pb-0`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-xs font-semibold text-white">
-          {index + 1}
+        <span className="text-sm font-semibold text-slate-800">
+          {step.stage ? (stageLabels[step.stage] || step.stage) : "未知阶段"}
         </span>
-        <h3 className="text-sm font-semibold text-slate-950">{stageLabel(step.stage)}</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
-          耗时：{step.latency_ms ?? 0} ms
+        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+          {step.latency_ms ?? 0}ms
         </span>
+        {step.engine && (
+          <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+            {engineLabel(step.engine)}
+          </span>
+        )}
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-700">{step.output || "暂无阶段输出"}</p>
-    </article>
-  );
-}
-
-function ToolCallItem({ call }: { call: TraceToolCall }) {
-  return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-        <span>节点：{call.node || "未记录"}</span>
-        <span>工具：{call.tool_name || "未记录"}</span>
-        <span>状态：{statusLabel(call.status)}</span>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-        <span>耗时：{call.latency_ms ?? 0} ms</span>
-        <span>重试：{call.retry_count ?? 0}</span>
-        <span>来源：{call.source || "无"}</span>
-      </div>
-      {call.error ? <p className="mt-2 text-xs text-red-700">错误：{call.error}</p> : null}
-    </article>
-  );
-}
-
-function SkippedNodeItem({ node }: { node: TraceSkippedNode }) {
-  return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-      <div>节点：{node.node || "未记录"}</div>
-      <div className="mt-1">工具：{node.tool_name || "未记录"}</div>
-      <div className="mt-1">原因：{reasonLabel(node.reason)}</div>
-    </article>
-  );
-}
-
-function ExecutorPanel({ step }: { step?: TraceStep }) {
-  if (!step) {
-    return (
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">LangGraph 执行器</h2>
-        <p className="mt-3 text-sm text-slate-600">暂无执行器 trace。</p>
-      </section>
-    );
-  }
-
-  const toolCalls = step.tool_calls || [];
-  const skippedNodes = step.skipped_nodes || [];
-
-  return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-slate-950">LangGraph 执行器</h2>
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-          {engineLabel(step.engine)}
-        </span>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-          fallback：{step.fallback_used ? "已触发" : "未触发"}
-        </span>
-      </div>
-      <p className="mt-3 text-sm text-slate-700">执行图：{step.graph_name || "未记录"}</p>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-950">工具调用</h3>
-          <div className="mt-3 grid gap-3">
-            {toolCalls.length > 0 ? (
-              toolCalls.map((call, index) => <ToolCallItem key={`${call.node}-${index}`} call={call} />)
-            ) : (
-              <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                暂无工具调用。
-              </p>
-            )}
-          </div>
+      {step.stage === "executor" && (
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+          <span>工具调用: {step.tool_calls?.length ?? 0}</span>
+          <span>跳过节点: {step.skipped_nodes?.length ?? 0}</span>
+          <span>Fallback: {step.fallback_used ? "已触发" : "未触发"}</span>
         </div>
-
-        <div>
-          <h3 className="text-sm font-semibold text-slate-950">跳过节点</h3>
-          <div className="mt-3 grid gap-3">
-            {skippedNodes.length > 0 ? (
-              skippedNodes.map((node, index) => (
-                <SkippedNodeItem key={`${node.node}-${index}`} node={node} />
-              ))
-            ) : (
-              <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
-                没有跳过节点。
-              </p>
-            )}
-          </div>
+      )}
+      {step.stage === "synthesizer" && (
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+          <span>LLM: {step.llm_used ? "是" : "否"}</span>
+          {step.llm_error && <span className="text-red-500">错误: {step.llm_error}</span>}
         </div>
-      </div>
-    </section>
+      )}
+      <p className="mt-2 text-xs leading-5 text-slate-600">{step.output || "暂无输出"}</p>
+
+      {/* Tool calls for executor */}
+      {step.tool_calls && step.tool_calls.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {step.tool_calls.map((tc, i) => (
+            <ToolCallBadge key={i} call={tc} />
+          ))}
+        </div>
+      )}
+
+      {/* Skipped nodes */}
+      {step.skipped_nodes && step.skipped_nodes.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {step.skipped_nodes.map((sn, i) => (
+            <SkippedBadge key={i} node={sn} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-function SynthesizerPanel({ step }: { step?: TraceStep }) {
+function ToolCallBadge({ call }: { call: TraceToolCall }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">回答生成器</h2>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="引擎" value={engineLabel(step?.engine)} />
-        <MetricCard label="是否使用 LLM" value={step?.llm_used ? "是" : "否"} />
-        <MetricCard label="LLM 错误" value={step?.llm_error || "无"} />
-        <MetricCard label="耗时" value={`${step?.latency_ms ?? 0} ms`} />
-      </div>
-    </section>
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-xs">
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${statusDot(call.status)}`} />
+      <span className="font-medium text-slate-700">{call.tool_name || "未知工具"}</span>
+      <span className="text-slate-400">节点: {call.node || "-"}</span>
+      <span className="text-slate-400">重试: {call.retry_count ?? 0}</span>
+      <span className="text-slate-400">{call.latency_ms ? `${call.latency_ms}ms` : ""}</span>
+      {call.error && <span className="text-red-500">错误: {call.error}</span>}
+    </div>
+  );
+}
+
+function SkippedBadge({ node }: { node: TraceSkippedNode }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/30 px-3 py-1.5 text-xs text-slate-500">
+      <span>已跳过 {node.node || node.tool_name || "未知节点"}</span>
+      {node.reason && <span>原因: {node.reason}</span>}
+    </div>
   );
 }
 
 export function TraceViewer({ trace, routeType }: TraceViewerProps) {
   const steps = trace?.steps || [];
-  const executorStep = findStep(trace, "executor");
-  const synthesizerStep = findStep(trace, "synthesizer");
-  const usesLangGraph = executorStep?.engine === "langgraph";
 
   return (
-    <section className="grid gap-5">
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Trace 执行链路</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <MetricCard label="trace_id" value={trace?.trace_id || "未记录"} />
-          <MetricCard label="问题类型" value={routeLabel(routeType)} />
-          <MetricCard label="总阶段数" value={steps.length} />
-          <MetricCard label="是否使用 LangGraph" value={usesLangGraph ? "是" : "否"} />
-          <MetricCard label="回答生成" value={engineLabel(synthesizerStep?.engine)} />
+    <div className="card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-slate-900">Trace 执行链路</h2>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>ID: {trace?.trace_id || "-"}</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5">
+            {steps.length} 阶段
+          </span>
         </div>
-      </section>
+      </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">执行阶段 Timeline</h2>
-        <div className="mt-4 grid gap-3">
-          {steps.length > 0 ? (
-            steps.map((step, index) => (
-              <TimelineStep key={`${step.stage}-${index}`} step={step} index={index} />
-            ))
-          ) : (
-            <p className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              暂无 trace 阶段信息。
-            </p>
-          )}
+      {steps.length > 0 ? (
+        <div className="mt-4 space-y-1">
+          {steps.map((step, i) => (
+            <TimelineStep key={`${step.stage}-${i}`} step={step} index={i} />
+          ))}
         </div>
-      </section>
-
-      <ExecutorPanel step={executorStep} />
-      <SynthesizerPanel step={synthesizerStep} />
-    </section>
+      ) : (
+        <p className="mt-4 text-sm text-slate-400">暂无 trace 数据。</p>
+      )}
+    </div>
   );
 }

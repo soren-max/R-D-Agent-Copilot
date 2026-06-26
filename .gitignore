@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# R&D Agent Copilot
+REASONIX.md
+.next/
+node_modules/
+tsconfig.tsbuildinfo
