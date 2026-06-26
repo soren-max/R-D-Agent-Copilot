@@ -121,6 +121,12 @@ DEEPSEEK_API_KEY=your_api_key_here
 
 不要提交 `.env` 或真实 API Key。
 
+## DeepSeek Answer Synthesizer
+
+DeepSeek API 当前只用于最终回答生成，也就是 Answer Synthesizer 阶段。Router 分类、Planner steps、LangGraph 工具编排和 Tool Selection 仍由确定性代码控制，DeepSeek 只能基于已有工具结果、RAG 文档和 trace 摘要组织更自然的中文回答。
+
+DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，系统会自动使用 fallback answer，并在响应和 trace 中记录 `answer_source=fallback`、`llm_used=false` 和对应错误信息。
+
 ## Demo Queries
 
 简单问答：
@@ -156,6 +162,14 @@ curl -X POST http://127.0.0.1:8000/chat \
 - Evaluation v1 返回质量评分、问题和建议
 
 更多 demo 步骤见 [docs/week1-demo.md](docs/week1-demo.md)。
+
+最终演示脚本：
+
+```bash
+python scripts/demo_final.py
+```
+
+完整演示流程见 [docs/final-demo.md](docs/final-demo.md)。
 
 ## Screenshots / Demo
 
@@ -198,3 +212,5 @@ PR 需要保持 CI 通过。
 
 - [docs/project-pitch.md](docs/project-pitch.md)：简历和面试介绍话术。
 - [docs/interview-notes.md](docs/interview-notes.md)：架构讲解、演示路径和边界说明。
+- [docs/interview-script.md](docs/interview-script.md)：30 秒、1 分钟、3 分钟面试讲稿和常见追问。
+- [docs/release-v0.2.0.md](docs/release-v0.2.0.md)：v0.2.0 最终验收清单。
