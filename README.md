@@ -110,6 +110,18 @@ Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.
 
 后续可以通过查询 API 读取历史 run 和完整执行链路。
 
+## Trace Query API
+
+历史 Trace 查询 API 用于查看已持久化的 Agent 执行链路。`run_id` 与 `/chat` 返回的 `trace.trace_id` 保持一致，后续前端可以接入历史 Trace Viewer。
+
+```bash
+curl "http://127.0.0.1:8000/runs?limit=20"
+```
+
+```bash
+curl "http://127.0.0.1:8000/runs/{run_id}"
+```
+
 ## LangGraph Execution Layer
 
 Router 和 Planner 仍由项目自定义实现。LangGraph 只用于 Executor 内部工具执行编排，不替代现有意图分类和任务规划。当前 graph 节点包括 `log_tool_node`、`config_tool_node`、`git_tool_node`、`rag_tool_node`。每个节点执行结果会进入 trace，方便后续 Trace Viewer 展示。
