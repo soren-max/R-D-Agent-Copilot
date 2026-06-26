@@ -110,6 +110,12 @@ Day10 新增 SQLite 持久化基础设施，默认数据库文件为 `data/runs.
 
 后续可以通过查询 API 读取历史 run 和完整执行链路。
 
+## Evaluation v1
+
+Day11 新增 rule-based Agent 执行质量评估，评分维度包括工具成功率、Trace 完整性、RAG 命中、回答证据性和执行耗时。
+
+当前 Evaluation v1 不使用 LLM 评审，不调用 DeepSeek，保证本地测试稳定且不影响 `/chat` 主流程。
+
 ## LangGraph Execution Layer
 
 Router 和 Planner 仍由项目自定义实现。LangGraph 只用于 Executor 内部工具执行编排，不替代现有意图分类和任务规划。当前 graph 节点包括 `log_tool_node`、`config_tool_node`、`git_tool_node`、`rag_tool_node`。每个节点执行结果会进入 trace，方便后续 Trace Viewer 展示。
