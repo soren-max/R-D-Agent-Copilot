@@ -4,42 +4,49 @@ type ToolResultCardProps = {
   toolResult: ToolResult;
 };
 
-function statusLabel(status: string | undefined) {
-  if (status === "success") {
-    return "成功";
-  }
-  if (status === "failed") {
-    return "失败";
-  }
-  if (status === "skipped") {
-    return "已跳过";
-  }
-  return status || "未知状态";
-}
+const statusConfig: Record<string, { label: string; dot: string; bg: string }> = {
+  success: { label: "成功", dot: "bg-emerald-500", bg: "border-emerald-100 bg-emerald-50/30" },
+  failed: { label: "失败", dot: "bg-red-500", bg: "border-red-100 bg-red-50/30" },
+  skipped: { label: "已跳过", dot: "bg-slate-400", bg: "border-slate-100 bg-slate-50/50" },
+  error: { label: "错误", dot: "bg-red-500", bg: "border-red-100 bg-red-50/30" },
+};
 
-function summarize(text: string | undefined) {
-  if (!text) {
-    return "暂无结果摘要";
-  }
-  return text.length > 140 ? `${text.slice(0, 140)}...` : text;
+function summarize(text: string | undefined, max = 160) {
+  if (!text) return "暂无结果";
+  return text.length > max ? text.slice(0, max) + "…" : text;
 }
 
 export function ToolResultCard({ toolResult }: ToolResultCardProps) {
+  const st = toolResult.status || "";
+  const cfg = statusConfig[st] || { label: st, dot: "bg-slate-400", bg: "border-slate-100 bg-slate-50/50" };
+
   return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-slate-950">
-          {toolResult.tool_name || toolResult.tool || "unknown_tool"}
-        </h3>
-        <span className="rounded-full bg-white px-2 py-1 text-xs text-slate-600">
-          {statusLabel(toolResult.status)}
-        </span>
+    <div className={`rounded-xl border ${cfg.bg} p-4`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`inline-block h-2 w-2 rounded-full ${cfg.dot}`} />
+          <h3 className="text-sm font-semibold text-slate-800">
+            {toolResult.tool_name || toolResult.tool || "unknown"}
+          </h3>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          {toolResult.latency_ms != null && toolResult.latency_ms > 0 && (
+            <span>{toolResult.latency_ms}ms</span>
+          )}
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            st === "success" ? "bg-emerald-100 text-emerald-700" :
+            st === "failed" || st === "error" ? "bg-red-100 text-red-700" :
+            "bg-slate-200 text-slate-600"
+          }`}>
+            {cfg.label}
+          </span>
+        </div>
       </div>
-      <dl className="mt-3 space-y-1 text-xs text-slate-600">
-        <div>置信度：{toolResult.confidence}</div>
-        <div>来源：{toolResult.source || "无"}</div>
-      </dl>
-      <p className="mt-3 text-sm leading-6 text-slate-800">{summarize(toolResult.result)}</p>
-    </article>
+      <div className="mt-2 flex gap-3 text-xs text-slate-400">
+        <span>置信度 {toolResult.confidence ?? "-"}</span>
+        <span>来源 {toolResult.source || "mock"}</span>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-700">{summarize(toolResult.result)}</p>
+    </div>
   );
 }

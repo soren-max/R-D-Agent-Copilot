@@ -13,118 +13,91 @@ const metricLabels: Record<keyof EvaluationMetrics, string> = {
 };
 
 function toPercent(value: number | undefined) {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "未记录";
-  }
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
   return `${Math.round(value * 100)}%`;
 }
 
 function scoreLevel(score: number | undefined) {
-  if (typeof score !== "number") {
-    return "未评估";
-  }
-  if (score >= 0.85) {
-    return "优秀";
-  }
-  if (score >= 0.7) {
-    return "良好";
-  }
-  if (score >= 0.5) {
-    return "一般";
-  }
-  return "需优化";
-}
-
-function MetricRow({ label, value }: { label: string; value: number | undefined }) {
-  const percent = Math.max(0, Math.min(100, Math.round((value ?? 0) * 100)));
-
-  return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-slate-700">{label}</span>
-        <span className="text-sm font-semibold text-slate-950">{toPercent(value)}</span>
-      </div>
-      <div className="mt-2 h-2 rounded-full bg-white">
-        <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${percent}%` }} />
-      </div>
-    </div>
-  );
+  if (typeof score !== "number") return { label: "未评估", color: "text-slate-400" };
+  if (score >= 0.85) return { label: "优秀", color: "text-emerald-600" };
+  if (score >= 0.70) return { label: "良好", color: "text-blue-600" };
+  if (score >= 0.50) return { label: "一般", color: "text-amber-600" };
+  return { label: "需优化", color: "text-red-600" };
 }
 
 export function EvaluationPanel({ evaluation }: EvaluationPanelProps) {
   if (!evaluation) {
     return (
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Agent 质量评估</h2>
-        <p className="mt-3 text-sm text-slate-600">暂无评估结果。</p>
-      </section>
+      <div className="card p-5">
+        <h2 className="text-sm font-semibold text-slate-900">质量评估</h2>
+        <p className="mt-4 text-sm text-slate-400">暂无数据</p>
+      </div>
     );
   }
 
+  const level = scoreLevel(evaluation.overall_score);
   const metrics = evaluation.metrics || {};
   const issues = evaluation.issues || [];
   const suggestions = evaluation.suggestions || [];
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-semibold text-slate-950">Agent 质量评估</h2>
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-          {scoreLevel(evaluation.overall_score)}
-        </span>
-      </div>
-
-      <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-4">
-        <p className="text-sm text-emerald-800">Agent 质量评分</p>
-        <p className="mt-1 text-3xl font-semibold text-emerald-900">
-          {toPercent(evaluation.overall_score)}
-        </p>
-      </div>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        {(Object.keys(metricLabels) as Array<keyof EvaluationMetrics>).map((key) => (
-          <MetricRow key={key} label={metricLabels[key]} value={metrics[key]} />
-        ))}
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-950">发现的问题</h3>
-          {issues.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-sm text-slate-700">
-              {issues.map((issue) => (
-                <li key={issue} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  {issue}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              暂无明显问题。
-            </p>
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-sm font-semibold text-slate-950">优化建议</h3>
-          {suggestions.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-sm text-slate-700">
-              {suggestions.map((suggestion) => (
-                <li
-                  key={suggestion}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2"
-                >
-                  {suggestion}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              暂无明显问题。
-            </p>
-          )}
+    <div className="card p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">质量评估</h2>
+        <div className="flex items-center gap-2">
+          <span className={`text-2xl font-bold ${level.color}`}>
+            {toPercent(evaluation.overall_score)}
+          </span>
+          <span className={`text-xs font-medium ${level.color}`}>{level.label}</span>
         </div>
       </div>
-    </section>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {(Object.keys(metricLabels) as Array<keyof EvaluationMetrics>).map((key) => {
+          const v = metrics[key];
+          const pct = Math.max(0, Math.min(100, Math.round((v ?? 0) * 100)));
+          return (
+            <div key={key}>
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>{metricLabels[key]}</span>
+                <span>{toPercent(v)}</span>
+              </div>
+              <div className="mt-1 h-1.5 w-full rounded-full bg-slate-100">
+                <div
+                  className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {issues.length > 0 && (
+        <div className="mt-5">
+          <h3 className="text-xs font-semibold text-slate-700">发现的问题</h3>
+          <ul className="mt-2 space-y-1">
+            {issues.map((issue) => (
+              <li key={issue} className="rounded-lg border border-red-100 bg-red-50/30 px-3 py-2 text-xs text-red-700">
+                {issue}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold text-slate-700">优化建议</h3>
+          <ul className="mt-2 space-y-1">
+            {suggestions.map((s) => (
+              <li key={s} className="rounded-lg border border-amber-100 bg-amber-50/30 px-3 py-2 text-xs text-amber-700">
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
