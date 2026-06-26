@@ -38,3 +38,8 @@ DeepSeek 只用于 Answer Synthesizer，LLM 不控制 Router、Planner 或 Tool 
 ## Day9：API Adapter abstraction
 
 API Adapter 抽象层，将 tools 与本地数据源解耦，预留真实日志平台、配置中心、Git API 接入能力。
+
+## Day11：Evaluation v1
+
+新增 rule-based Evaluation v1，用工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时衡量 Agent 执行质量。
+前端展示 overall_score、metrics、issues 和 suggestions，并在 Trace Viewer 中兼容 evaluation stage。

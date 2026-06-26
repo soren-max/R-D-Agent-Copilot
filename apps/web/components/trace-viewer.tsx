@@ -10,6 +10,7 @@ const stageLabels: Record<string, { en: string; zh: string }> = {
   planner: { en: "Planner", zh: "任务规划" },
   executor: { en: "Executor", zh: "执行器" },
   synthesizer: { en: "Synthesizer", zh: "回答生成器" },
+  evaluation: { en: "Evaluation", zh: "质量评估" },
 };
 
 function stageLabel(stage: string | undefined) {
@@ -52,6 +53,9 @@ function engineLabel(engine: string | undefined) {
   }
   if (engine === "langgraph") {
     return "LangGraph";
+  }
+  if (engine === "rule_based") {
+    return "规则评估";
   }
   return engine || "未记录";
 }
@@ -194,10 +198,35 @@ function SynthesizerPanel({ step }: { step?: TraceStep }) {
   );
 }
 
+function EvaluationTracePanel({ step }: { step?: TraceStep }) {
+  if (!step) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-semibold text-slate-950">质量评估 Trace</h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <MetricCard label="引擎" value={engineLabel(step.engine)} />
+        <MetricCard
+          label="总体评分"
+          value={
+            typeof step.overall_score === "number"
+              ? `${Math.round(step.overall_score * 100)}%`
+              : "未记录"
+          }
+        />
+        <MetricCard label="耗时" value={`${step.latency_ms ?? 0} ms`} />
+      </div>
+    </section>
+  );
+}
+
 export function TraceViewer({ trace, routeType }: TraceViewerProps) {
   const steps = trace?.steps || [];
   const executorStep = findStep(trace, "executor");
   const synthesizerStep = findStep(trace, "synthesizer");
+  const evaluationStep = findStep(trace, "evaluation");
   const usesLangGraph = executorStep?.engine === "langgraph";
 
   return (
@@ -230,6 +259,7 @@ export function TraceViewer({ trace, routeType }: TraceViewerProps) {
 
       <ExecutorPanel step={executorStep} />
       <SynthesizerPanel step={synthesizerStep} />
+      <EvaluationTracePanel step={evaluationStep} />
     </section>
   );
 }
