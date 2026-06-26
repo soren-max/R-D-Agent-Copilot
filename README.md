@@ -163,6 +163,14 @@ curl -X POST http://127.0.0.1:8000/chat \
 
 更多 demo 步骤见 [docs/week1-demo.md](docs/week1-demo.md)。
 
+最终演示脚本：
+
+```bash
+python scripts/demo_final.py
+```
+
+完整演示流程见 [docs/final-demo.md](docs/final-demo.md)。
+
 ## Screenshots / Demo
 
 当前仓库暂未提交截图，避免编造展示素材。建议后续补充：
@@ -204,3 +212,5 @@ PR 需要保持 CI 通过。
 
 - [docs/project-pitch.md](docs/project-pitch.md)：简历和面试介绍话术。
 - [docs/interview-notes.md](docs/interview-notes.md)：架构讲解、演示路径和边界说明。
+- [docs/interview-script.md](docs/interview-script.md)：30 秒、1 分钟、3 分钟面试讲稿和常见追问。
+- [docs/release-v0.2.0.md](docs/release-v0.2.0.md)：v0.2.0 最终验收清单。
