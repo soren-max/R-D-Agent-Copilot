@@ -28,6 +28,7 @@ export type ToolResult = {
   confidence: number;
   source: string;
   result: string;
+  latency_ms?: number;
 };
 
 export type TraceToolCall = {
