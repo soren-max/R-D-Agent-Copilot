@@ -1,48 +1,55 @@
 const capabilities = [
   {
-    title: "智能分流",
-    desc: "Simple QA / Complex Troubleshooting",
-    icon: "▶",
+    title: "Agent 模式",
+    desc: "Plan-Execute",
+    icon: "01",
   },
   {
-    title: "工具编排",
+    title: "工具节点",
     desc: "Log / Config / Git / RAG",
-    icon: "⚙",
+    icon: "02",
   },
   {
-    title: "Trace 可观测",
-    desc: "Node / Tool Call / Retry / Fallback",
-    icon: "◉",
+    title: "执行引擎",
+    desc: "LangGraph",
+    icon: "03",
   },
   {
     title: "质量评估",
-    desc: "Evaluation Score / Evidence Grounding",
-    icon: "◎",
+    desc: "Evaluation v1",
+    icon: "04",
   },
 ];
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-emerald-50/40 px-8 py-10">
+    <section className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white px-6 py-7 shadow-sm lg:px-8">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent" />
       <div className="relative z-10">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <span className="dot-green" />
+          Observable AI Agent Console
+        </div>
+        <h2 className="max-w-4xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
           执行链路可观测的研发排障 Agent
         </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          输入研发问题后，系统会经过 Router、Planner、LangGraph Tool Nodes、RAG 和 Answer
-          Synthesizer，生成可追踪、可评估的中文排障报告。
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[15px]">
+          通过 Router、Planner、LangGraph Tool Nodes、RAG 和 Answer Synthesizer，
+          将研发问题转化为可追踪、可评估的中文排障报告。
         </p>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {capabilities.map((c) => (
             <div
               key={c.title}
-              className="rounded-xl border border-slate-200/70 bg-white/70 px-4 py-3.5 backdrop-blur-sm transition-colors hover:border-emerald-200/60"
+              className="card-interactive rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-4"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-emerald-600">{c.icon}</span>
-                <span className="text-sm font-semibold text-slate-800">{c.title}</span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-900">{c.title}</span>
+                <span className="rounded-full bg-white px-2 py-1 font-mono text-[11px] font-semibold text-emerald-700 ring-1 ring-slate-200">
+                  {c.icon}
+                </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500">{c.desc}</p>
+              <p className="mt-2 text-xs font-medium text-slate-500">{c.desc}</p>
             </div>
           ))}
         </div>

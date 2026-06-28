@@ -7,11 +7,11 @@ type AgentPipelineProps = {
 };
 
 const stages = [
-  { id: "router",      label: "Router 路由器" },
-  { id: "planner",     label: "Planner 任务规划" },
-  { id: "executor",    label: "LangGraph Executor 执行器" },
-  { id: "synthesizer", label: "Answer Synthesizer 回答生成" },
-  { id: "evaluation",  label: "Evaluation 质量评估" },
+  { id: "router",      label: "Router",      zh: "路由器" },
+  { id: "planner",     label: "Planner",     zh: "任务规划" },
+  { id: "executor",    label: "LangGraph",   zh: "执行器" },
+  { id: "synthesizer", label: "Synthesizer", zh: "回答生成" },
+  { id: "evaluation",  label: "Evaluation",  zh: "质量评估" },
 ];
 
 type StageStatus = "pending" | "running" | "done";
@@ -41,9 +41,12 @@ function StageLabel({ status }: { status: StageStatus }) {
 export function AgentPipeline({ route, trace, isLoading = false }: AgentPipelineProps) {
   const steps = trace?.steps;
   return (
-    <div className="card">
+    <div className="card card-interactive">
       <div className="card-header">
-        <h2 className="text-sm font-semibold text-slate-900">Agent Pipeline</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-slate-950">Agent Pipeline</h2>
+          <span className="badge-slate">{steps?.length ?? 0} stages</span>
+        </div>
       </div>
       <div className="card-body">
         <div className="space-y-0">
@@ -51,13 +54,13 @@ export function AgentPipeline({ route, trace, isLoading = false }: AgentPipeline
             const status = stageStatus(stage.id, isLoading, steps);
             return (
               <div key={stage.id} className="relative flex items-start gap-3 pb-4 last:pb-0">
-                {idx < stages.length - 1 && (
-                  <div className={`absolute left-[11px] top-4 h-full w-px ${status === "done" ? "bg-emerald-200" : "bg-slate-200"}`} />
-                )}
+                {idx < stages.length - 1 && <div className={`absolute left-[11px] top-4 h-full w-px ${status === "done" ? "bg-emerald-200" : "bg-slate-200"}`} />}
                 <div className="relative z-10 mt-0.5"><StageDot status={status} /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-800">{stage.label}</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      {stage.label} <span className="font-normal text-slate-400">{stage.zh}</span>
+                    </span>
                     <StageLabel status={status} />
                   </div>
                   {stage.id === "router" && route && (
@@ -66,7 +69,7 @@ export function AgentPipeline({ route, trace, isLoading = false }: AgentPipeline
                     </p>
                   )}
                   {stage.id === "executor" && status === "done" && (
-                    <p className="mt-0.5 text-xs text-slate-400">
+                    <p className="mt-0.5 text-xs font-medium text-emerald-700">
                       {steps?.find((s) => s.stage === "executor")?.tool_calls?.length ?? 0} 个工具
                     </p>
                   )}
