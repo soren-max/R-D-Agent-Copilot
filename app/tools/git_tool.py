@@ -1,5 +1,5 @@
 """
-Git 变更查询工具 - 通过 LocalGitAdapter 检索本地确定性提交样例。
+Git 变更查询工具 - 通过 LocalGitAdapter 调用本地 Mock Git API。
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any
 
 from app.adapters.base import AdapterResult
 from app.adapters.git_adapter import GIT_FILE as ADAPTER_GIT_FILE
-from app.adapters.git_adapter import GIT_SOURCE, LocalGitAdapter
+from app.adapters.git_adapter import LocalGitAdapter
 
 GIT_FILE = ADAPTER_GIT_FILE
 
@@ -18,7 +18,7 @@ class GitTool:
     name = "git_tool"
 
     def run(self, query: str, context: str | None = None) -> dict[str, Any]:
-        adapter_result = LocalGitAdapter(git_file=Path(GIT_FILE), source=GIT_SOURCE).search_commits(
+        adapter_result = LocalGitAdapter(git_file=Path(GIT_FILE)).search_commits(
             query,
             context or "",
         )

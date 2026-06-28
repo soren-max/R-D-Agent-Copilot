@@ -38,6 +38,7 @@ class Tracer:
         graph_name: str = "",
         llm_used: bool = False,
         llm_error: str = "",
+        prompt_version: str = "",
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -52,6 +53,7 @@ class Tracer:
             latency_ms=latency_ms,
             llm_used=llm_used,
             llm_error=llm_error,
+            prompt_version=prompt_version,
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
             fallback_used=fallback_used,
@@ -95,6 +97,7 @@ class Tracer:
         answer_source: str,
         llm_used: bool,
         llm_error: str | None,
+        prompt_version: str = "",
     ) -> None:
         """记录 synthesizer 阶段的 LLM 使用情况。"""
         self.end_stage(
@@ -103,6 +106,7 @@ class Tracer:
             engine="deepseek" if llm_used else "fallback",
             llm_used=llm_used,
             llm_error=llm_error or "",
+            prompt_version=prompt_version,
         )
 
     def set_final_answer(self, answer: str) -> None:

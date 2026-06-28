@@ -12,24 +12,28 @@ def _payload(**overrides):
                 "tool": "log_tool",
                 "tool_name": "log_tool",
                 "status": "success",
+                "latency_ms": 12,
                 "documents": [],
             },
             {
                 "tool": "config_tool",
                 "tool_name": "config_tool",
                 "status": "success",
+                "latency_ms": 8,
                 "documents": [],
             },
             {
                 "tool": "git_tool",
                 "tool_name": "git_tool",
                 "status": "success",
+                "latency_ms": 5,
                 "documents": [],
             },
             {
                 "tool": "rag_retriever",
                 "tool_name": "rag_retriever",
                 "status": "success",
+                "latency_ms": 15,
                 "documents": [{"title": "订单服务 FAQ"}],
             },
         ],
@@ -112,6 +116,18 @@ def test_latency_score_uses_thresholds():
     assert evaluator.evaluate(_payload(trace={"total_latency_ms": 8000})).metrics.latency_score == 0.6
     assert evaluator.evaluate(_payload(trace={"total_latency_ms": 8001})).metrics.latency_score == 0.3
     assert evaluator.evaluate(_payload(trace={})).metrics.latency_score == 0.5
+
+
+def test_latency_breakdown_separates_stages_and_tools():
+    result = RuleBasedEvaluator().evaluate(_payload())
+
+    assert result.latency_breakdown.router_ms == 10
+    assert result.latency_breakdown.planner_ms == 10
+    assert result.latency_breakdown.executor_ms == 50
+    assert result.latency_breakdown.tools_ms == 40
+    assert result.latency_breakdown.synthesizer_ms == 30
+    assert result.latency_breakdown.total_ms == 100
+    assert result.latency_breakdown.bottleneck_stage == "executor"
 
 
 def test_overall_score_is_between_zero_and_one():

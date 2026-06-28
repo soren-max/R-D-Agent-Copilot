@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.eval.schemas import EvaluationInput, EvaluationMetrics, EvaluationResult
+from app.eval.schemas import EvaluationInput, EvaluationMetrics, EvaluationResult, LatencyBreakdown
 
 
 CORE_TRACE_STAGES = {"router", "planner", "executor", "synthesizer"}
@@ -43,6 +43,7 @@ class RuleBasedEvaluator:
         return EvaluationResult(
             overall_score=self._overall_score(metrics),
             metrics=metrics,
+            latency_breakdown=self.build_latency_breakdown(data.trace, data.tool_results),
             issues=issues,
             suggestions=suggestions,
         )
@@ -113,6 +114,48 @@ class RuleBasedEvaluator:
             return 0.6
         return 0.3
 
+    def build_latency_breakdown(
+        self,
+        trace: dict[str, Any],
+        tool_results: list[dict[str, Any]],
+    ) -> LatencyBreakdown:
+        stage_latencies = self._stage_latencies(trace)
+        tools_ms = sum(
+            self._coerce_ms(self._get(result, "latency_ms"))
+            for result in tool_results
+            if self._get(result, "tool") != "none" and self._get(result, "status") != "skipped"
+        )
+        total_ms = self._coerce_ms(self._get(trace, "total_latency_ms"))
+        if total_ms == 0:
+            total_ms = sum(stage_latencies.values())
+
+        bottleneck_candidates = {
+            "router": stage_latencies.get("router", 0),
+            "planner": stage_latencies.get("planner", 0),
+            "executor": stage_latencies.get("executor", 0),
+            "tools": tools_ms,
+            "synthesizer": stage_latencies.get("synthesizer", 0),
+            "evaluation": stage_latencies.get("evaluation", 0),
+        }
+        bottleneck_stage, bottleneck_ms = max(
+            bottleneck_candidates.items(),
+            key=lambda item: item[1],
+        )
+        if bottleneck_ms <= 0:
+            bottleneck_stage = "unknown"
+
+        return LatencyBreakdown(
+            router_ms=stage_latencies.get("router", 0),
+            planner_ms=stage_latencies.get("planner", 0),
+            executor_ms=stage_latencies.get("executor", 0),
+            tools_ms=tools_ms,
+            synthesizer_ms=stage_latencies.get("synthesizer", 0),
+            evaluation_ms=stage_latencies.get("evaluation", 0),
+            total_ms=total_ms,
+            bottleneck_stage=bottleneck_stage,
+            bottleneck_ms=bottleneck_ms,
+        )
+
     def _overall_score(self, metrics: EvaluationMetrics) -> float:
         score = (
             metrics.tool_success_rate * WEIGHTS["tool_success_rate"]
@@ -167,6 +210,22 @@ class RuleBasedEvaluator:
             trace=self._as_dict(self._get(payload, "trace", {})),
             answer=self._get(payload, "answer", ""),
         )
+
+    def _stage_latencies(self, trace: dict[str, Any]) -> dict[str, int]:
+        latencies: dict[str, int] = {}
+        for step in self._get(trace, "steps", []):
+            stage = self._get(step, "stage")
+            if not stage:
+                continue
+            latencies[stage] = latencies.get(stage, 0) + self._coerce_ms(self._get(step, "latency_ms"))
+        return latencies
+
+    def _coerce_ms(self, value: Any) -> int:
+        if isinstance(value, bool):
+            return 0
+        if isinstance(value, (int, float)):
+            return max(0, int(value))
+        return 0
 
     def _as_dict(self, value: Any) -> dict[str, Any]:
         if isinstance(value, BaseModel):

@@ -1,4 +1,4 @@
-import type { EvaluationMetrics, EvaluationResult } from "@/lib/api";
+import type { EvaluationMetrics, EvaluationResult, LatencyBreakdown } from "@/lib/api";
 
 type EvaluationPanelProps = {
   evaluation?: EvaluationResult | null;
@@ -25,6 +25,38 @@ function scoreLevel(score: number | undefined) {
   return { label: "需优化", color: "text-red-600" };
 }
 
+type LatencyMsKey =
+  | "router_ms"
+  | "planner_ms"
+  | "executor_ms"
+  | "tools_ms"
+  | "synthesizer_ms"
+  | "evaluation_ms";
+
+const latencyLabels: Array<[LatencyMsKey, string]> = [
+  ["router_ms", "Router"],
+  ["planner_ms", "Planner"],
+  ["executor_ms", "LangGraph Executor"],
+  ["tools_ms", "Tools"],
+  ["synthesizer_ms", "DeepSeek Synthesizer"],
+  ["evaluation_ms", "Evaluation"],
+];
+
+function formatMs(value: number | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "0ms";
+  return `${Math.round(value)}ms`;
+}
+
+function bottleneckLabel(stage: string | undefined) {
+  if (stage === "router") return "Router";
+  if (stage === "planner") return "Planner";
+  if (stage === "executor") return "LangGraph Executor";
+  if (stage === "tools") return "Tools";
+  if (stage === "synthesizer") return "DeepSeek Synthesizer";
+  if (stage === "evaluation") return "Evaluation";
+  return "未识别";
+}
+
 export function EvaluationPanel({ evaluation }: EvaluationPanelProps) {
   if (!evaluation) {
     return (
@@ -41,6 +73,7 @@ export function EvaluationPanel({ evaluation }: EvaluationPanelProps) {
 
   const level = scoreLevel(evaluation.overall_score);
   const metrics = evaluation.metrics || {};
+  const latency = evaluation.latency_breakdown;
   const issues = evaluation.issues || [];
   const suggestions = evaluation.suggestions || [];
 
@@ -76,6 +109,38 @@ export function EvaluationPanel({ evaluation }: EvaluationPanelProps) {
             );
           })}
         </div>
+
+        {latency && (
+          <div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-xs font-semibold text-slate-700">耗时拆解</h3>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                瓶颈: {bottleneckLabel(latency.bottleneck_stage)} · {formatMs(latency.bottleneck_ms)}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {latencyLabels.map(([key, label]) => {
+                const value = latency[key];
+                const total = Math.max(latency.total_ms ?? 0, 1);
+                const pct = Math.min(100, Math.round(((value ?? 0) / total) * 100));
+                return (
+                  <div key={key}>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>{label}</span>
+                      <span>{formatMs(value)}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full rounded-full bg-slate-100">
+                      <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              总耗时 {formatMs(latency.total_ms)}，Tools 为各工具调用耗时之和，用于区分工具执行与 LLM 生成成本。
+            </p>
+          </div>
+        )}
 
         {/* Issues */}
         {issues.length > 0 && (

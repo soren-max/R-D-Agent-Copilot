@@ -20,6 +20,9 @@ def test_post_chat_simple_qa_returns_evaluation():
     assert data["evaluation"] is not None
     assert 0 <= data["evaluation"]["overall_score"] <= 1
     assert "tool_success_rate" in data["evaluation"]["metrics"]
+    assert "latency_breakdown" in data["evaluation"]
+    assert data["evaluation"]["latency_breakdown"]["total_ms"] >= 0
+    assert data["evaluation"]["latency_breakdown"]["bottleneck_stage"]
 
 
 def test_post_chat_complex_troubleshooting_returns_evaluation():
@@ -60,6 +63,8 @@ def test_get_run_returns_evaluation():
     detail = response.json()
     assert detail["evaluation"] is not None
     assert detail["evaluation"]["overall_score"] == data["evaluation"]["overall_score"]
+    assert detail["evaluation"]["latency_breakdown"]["tools_ms"] >= 0
+    assert detail["evaluation"]["latency_breakdown"]["synthesizer_ms"] >= 0
 
 
 def test_get_runs_list_returns_evaluation_score():

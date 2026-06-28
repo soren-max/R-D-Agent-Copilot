@@ -4,23 +4,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-import re
 from time import perf_counter
 
 from app.adapters.base import AdapterResult
+from app.adapters.mock_api_client import MockAPIClient
+from app.mock.services import LOG_FILE, LOG_SOURCE
 
-LOG_SOURCE = "data/logs/order-service.log"
-LOG_FILE = Path(__file__).resolve().parents[2] / LOG_SOURCE
-
-_MATCH_KEYWORDS = [
-    "500",
-    "报错",
-    "异常",
-    "timeout",
-    "超时",
-    "order",
-    "订单",
-]
+MOCK_LOG_API_SOURCE = "mock_api:/mock/logs"
 
 
 class LogAdapter(ABC):
@@ -32,17 +22,22 @@ class LogAdapter(ABC):
 
 
 class LocalLogAdapter(LogAdapter):
-    """Local mock log adapter backed by deterministic sample data."""
+    """Local mock log adapter backed by the in-process mock API."""
 
-    adapter_name = "local_log_adapter"
+    adapter_name = "mock_api_log_adapter"
 
-    def __init__(self, log_file: Path = LOG_FILE, source: str = LOG_SOURCE) -> None:
+    def __init__(
+        self,
+        log_file: Path = LOG_FILE,
+        source: str = MOCK_LOG_API_SOURCE,
+        client: MockAPIClient | None = None,
+    ) -> None:
         self.log_file = log_file
         self.source = source
+        self.client = client or MockAPIClient()
 
     def search_logs(self, query: str, context: str = "") -> AdapterResult:
         started_at = perf_counter()
-
         if not self.log_file.exists():
             return AdapterResult(
                 adapter_name=self.adapter_name,
@@ -54,35 +49,15 @@ class LocalLogAdapter(LogAdapter):
                 latency_ms=(perf_counter() - started_at) * 1000,
             )
 
-        query_text = f"{query} {context}".lower()
-        matched_keywords = [
-            keyword for keyword in _MATCH_KEYWORDS
-            if re.search(re.escape(keyword.lower()), query_text)
-        ]
-
-        lines = self.log_file.read_text(encoding="utf-8").splitlines()
-        if matched_keywords:
-            relevant_lines = [
-                line for line in lines
-                if any(keyword.lower() in line.lower() for keyword in matched_keywords)
-            ]
-        else:
-            relevant_lines = []
-
-        if not relevant_lines:
-            relevant_lines = lines[:3]
-            confidence = 0.55
-            summary = "未命中明确关键词，返回最近日志片段："
-        else:
-            confidence = 0.9
-            summary = f"命中关键词：{', '.join(matched_keywords)}。匹配到 {len(relevant_lines)} 条相关日志："
+        payload = self.client.get("/mock/logs", {"query": query, "context": context})
+        latency_ms = (perf_counter() - started_at) * 1000
 
         return AdapterResult(
             adapter_name=self.adapter_name,
-            status="success",
-            data=summary + "\n" + "\n".join(relevant_lines[:5]),
+            status=payload.get("status", "failed"),
+            data=payload.get("data", ""),
             source=self.source,
-            confidence=confidence,
-            error=None,
-            latency_ms=(perf_counter() - started_at) * 1000,
+            confidence=payload.get("confidence", 0.0),
+            error=payload.get("error"),
+            latency_ms=payload.get("latency_ms", latency_ms),
         )

@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.eval import RuleBasedEvaluator
 from app.persistence.repositories import RunRepository
 
 router = APIRouter(tags=["runs"])
@@ -32,7 +33,7 @@ def get_run(run_id: str) -> dict[str, Any]:
         "run": _format_run(run),
         "steps": [_format_step(step) for step in run.get("steps", [])],
         "tool_calls": [_format_tool_call(tool_call) for tool_call in run.get("tool_calls", [])],
-        "evaluation": run.get("evaluation"),
+        "evaluation": _format_evaluation(run),
     }
 
 
@@ -77,3 +78,28 @@ def _format_tool_call(tool_call: dict[str, Any]) -> dict[str, Any]:
         "result": tool_call["result_json"],
         "created_at": tool_call["created_at"],
     }
+
+
+def _format_evaluation(run: dict[str, Any]) -> dict[str, Any] | None:
+    evaluation = run.get("evaluation")
+    if evaluation is None:
+        return None
+
+    data = dict(evaluation)
+    if "latency_breakdown" not in data:
+        data["latency_breakdown"] = RuleBasedEvaluator().build_latency_breakdown(
+            {
+                "total_latency_ms": run.get("total_latency_ms"),
+                "steps": run.get("steps", []),
+            },
+            [
+                {
+                    "tool": tool_call.get("tool_name"),
+                    "tool_name": tool_call.get("tool_name"),
+                    "status": tool_call.get("status"),
+                    "latency_ms": tool_call.get("latency_ms"),
+                }
+                for tool_call in run.get("tool_calls", [])
+            ],
+        ).model_dump()
+    return data

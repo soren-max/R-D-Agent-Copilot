@@ -58,7 +58,7 @@ def test_local_data_tools_can_be_called_individually():
         assert result["tool_name"] == tool.name
         assert result["result"]
         assert 0 <= result["confidence"] <= 1
-        assert result["source"].startswith("data/")
+        assert result["source"].startswith("mock_api:")
 
 
 def test_chat_api_returns_day1_acceptance_shape():
@@ -117,7 +117,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     ]
     assert all(r.status == "success" for r in resp.tool_results)
     assert all(r.latency_ms >= 0 for r in resp.tool_results)
-    assert all(r.source.startswith("data/") for r in resp.tool_results)
+    assert all(r.source.startswith("mock_api:") or r.tool == "rag_retriever" for r in resp.tool_results)
     assert any("\u4e00" <= c <= "\u9fff" for c in resp.answer)
 
     trace_stages = [s.stage for s in resp.trace.steps]
@@ -139,7 +139,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     ]
     assert all(call.status == "success" for call in executor_step.tool_calls)
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
-    assert all(call.source.startswith("data/") for call in executor_step.tool_calls)
+    assert all(call.source.startswith("mock_api:") or call.tool_name == "rag_retriever" for call in executor_step.tool_calls)
     assert executor_step.skipped_nodes == []
     synthesizer_step = [s for s in resp.trace.steps if s.stage == "synthesizer"][0]
     assert synthesizer_step.engine == "fallback"
@@ -168,7 +168,10 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
     assert all(result.status == "success" for result in results)
     assert all(result.retry_count == 0 for result in results)
     assert all(result.latency_ms >= 0 for result in results)
-    assert all(result.source.startswith("data/") for result in results)
+    assert all(
+        result.source.startswith("mock_api:") or result.tool_name == "rag_retriever"
+        for result in results
+    )
     assert results[-1].documents
 
 
@@ -189,7 +192,7 @@ def test_executor_returns_failed_status_for_tool_errors():
                         "status": "failed",
                         "result": "",
                         "confidence": 0.0,
-                        "source": "data/logs/order-service.log",
+                        "source": "mock_api:/mock/logs",
                         "documents": [],
                         "error": "file_not_found",
                         "retry_count": 1,
@@ -204,7 +207,7 @@ def test_executor_returns_failed_status_for_tool_errors():
                         "retry_count": 1,
                         "error": "file_not_found",
                         "latency_ms": 5,
-                        "source": "data/logs/order-service.log",
+                        "source": "mock_api:/mock/logs",
                     }
                 ],
                 "skipped_nodes": [],
@@ -232,7 +235,7 @@ def test_executor_returns_failed_status_for_tool_errors():
     assert result.node == "log_tool_node"
     assert result.result == ""
     assert result.confidence == 0.0
-    assert result.source == "data/logs/order-service.log"
+    assert result.source == "mock_api:/mock/logs"
     assert result.error == "file_not_found"
     assert result.retry_count == 1
     assert result.latency_ms == 5
@@ -248,7 +251,7 @@ def test_chat_tool_failure_retries_falls_back_and_continues(monkeypatch):
             "status": "failed",
             "result": "",
             "confidence": 0.0,
-            "source": "data/logs/order-service.log",
+            "source": "mock_api:/mock/logs",
             "documents": [],
             "error": "file_not_found",
         }
@@ -298,7 +301,7 @@ def test_synthesizer_mentions_partial_tool_failure():
                 tool_name="log_tool",
                 description="查询日志",
                 status="failed",
-                source="data/logs/order-service.log",
+                source="mock_api:/mock/logs",
                 error="file_not_found",
             ),
             ToolCallRecord(
@@ -310,7 +313,7 @@ def test_synthesizer_mentions_partial_tool_failure():
                 status="success",
                 result="发现订单/支付相关配置差异：payment.timeout",
                 confidence=0.85,
-                source="data/configs/dev.json,data/configs/prod.json",
+                source="mock_api:/mock/configs",
             ),
         ],
     )

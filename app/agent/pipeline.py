@@ -56,6 +56,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         answer_source=synthesis["answer_source"],
         llm_used=synthesis["llm_used"],
         llm_error=synthesis["llm_error"],
+        prompt_version=synthesis["prompt_version"],
     )
     tracer.set_final_answer(answer)
 

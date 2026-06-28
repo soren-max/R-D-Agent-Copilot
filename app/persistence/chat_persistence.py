@@ -102,6 +102,7 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         "fallback_used": trace_step.fallback_used,
         "llm_used": trace_step.llm_used,
         "llm_error": trace_step.llm_error,
+        "prompt_version": trace_step.prompt_version,
     }
     if trace_step.stage == "router":
         data["route"] = response.route.model_dump()

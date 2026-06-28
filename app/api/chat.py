@@ -41,6 +41,12 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
             }
         )
         evaluation_latency_ms = int((time.perf_counter() - evaluation_start) * 1000)
+        response.evaluation.latency_breakdown.evaluation_ms = evaluation_latency_ms
+        response.evaluation.latency_breakdown.total_ms += evaluation_latency_ms
+        current_bottleneck = response.evaluation.latency_breakdown.bottleneck_ms
+        if evaluation_latency_ms > current_bottleneck:
+            response.evaluation.latency_breakdown.bottleneck_stage = "evaluation"
+            response.evaluation.latency_breakdown.bottleneck_ms = evaluation_latency_ms
         response.trace.steps.append(
             TraceStep(
                 stage="evaluation",

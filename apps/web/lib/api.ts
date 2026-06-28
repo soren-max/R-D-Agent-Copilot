@@ -1,7 +1,8 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8005";
 
 export const CHAT_ENDPOINT = `${API_BASE_URL}/chat`;
+export const RUNS_ENDPOINT = `${API_BASE_URL}/runs`;
 
 export type RouteResult = {
   type: "simple_qa" | "complex_troubleshooting" | string;
@@ -55,6 +56,7 @@ export type TraceStep = {
   latency_ms?: number;
   llm_used?: boolean;
   llm_error?: string | null;
+  prompt_version?: string;
   tool_calls?: TraceToolCall[];
   skipped_nodes?: TraceSkippedNode[];
   fallback_used?: boolean;
@@ -76,9 +78,22 @@ export type EvaluationMetrics = {
   latency_score?: number;
 };
 
+export type LatencyBreakdown = {
+  router_ms?: number;
+  planner_ms?: number;
+  executor_ms?: number;
+  tools_ms?: number;
+  synthesizer_ms?: number;
+  evaluation_ms?: number;
+  total_ms?: number;
+  bottleneck_stage?: string;
+  bottleneck_ms?: number;
+};
+
 export type EvaluationResult = {
   overall_score?: number;
   metrics?: EvaluationMetrics;
+  latency_breakdown?: LatencyBreakdown;
   issues?: string[];
   suggestions?: string[];
 };
@@ -96,6 +111,48 @@ export type ChatResponse = {
   evaluation?: EvaluationResult | null;
 };
 
+export type RunSummary = {
+  run_id: string;
+  query: string;
+  route_type?: string | null;
+  answer_source?: string | null;
+  llm_used?: boolean;
+  status?: string | null;
+  total_latency_ms?: number | null;
+  evaluation_score?: number | null;
+  created_at?: string | null;
+};
+
+export type PersistedRunStep = {
+  stage?: string;
+  engine?: string | null;
+  input?: Record<string, unknown> | unknown[] | null;
+  output?: Record<string, unknown> | unknown[] | null;
+  latency_ms?: number | null;
+  status?: string | null;
+  created_at?: string | null;
+};
+
+export type PersistedToolCall = {
+  node?: string | null;
+  tool_name?: string | null;
+  status?: string | null;
+  source?: string | null;
+  confidence?: number | null;
+  retry_count?: number | null;
+  error?: string | null;
+  latency_ms?: number | null;
+  result?: Record<string, unknown> | unknown[] | null;
+  created_at?: string | null;
+};
+
+export type RunDetail = {
+  run: RunSummary;
+  steps: PersistedRunStep[];
+  tool_calls: PersistedToolCall[];
+  evaluation?: EvaluationResult | null;
+};
+
 export async function postChat(query: string): Promise<ChatResponse> {
   const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
@@ -107,6 +164,31 @@ export async function postChat(query: string): Promise<ChatResponse> {
 
   if (!response.ok) {
     throw new Error(`Chat request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchRuns(limit = 30): Promise<RunSummary[]> {
+  const response = await fetch(`${RUNS_ENDPOINT}?limit=${limit}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Runs request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.runs ?? [];
+}
+
+export async function fetchRun(runId: string): Promise<RunDetail> {
+  const response = await fetch(`${RUNS_ENDPOINT}/${encodeURIComponent(runId)}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Run detail request failed: ${response.status}`);
   }
 
   return response.json();

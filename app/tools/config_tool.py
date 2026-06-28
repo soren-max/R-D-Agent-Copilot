@@ -1,5 +1,5 @@
 """
-配置查询工具 - 通过 LocalConfigAdapter 对比本地 dev/prod 确定性配置样例。
+配置查询工具 - 通过 LocalConfigAdapter 调用本地 Mock Config API。
 """
 
 from __future__ import annotations
@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from app.adapters.base import AdapterResult
-from app.adapters.config_adapter import CONFIG_SOURCE
 from app.adapters.config_adapter import DEV_CONFIG_FILE as ADAPTER_DEV_CONFIG_FILE
 from app.adapters.config_adapter import DEV_CONFIG_SOURCE, LocalConfigAdapter
 from app.adapters.config_adapter import PROD_CONFIG_FILE as ADAPTER_PROD_CONFIG_FILE
@@ -25,7 +24,6 @@ class ConfigTool:
         adapter_result = LocalConfigAdapter(
             dev_config_file=Path(DEV_CONFIG_FILE),
             prod_config_file=Path(PROD_CONFIG_FILE),
-            source=CONFIG_SOURCE,
         ).compare_configs(query, context or "")
         return self._to_tool_result(adapter_result)
 
