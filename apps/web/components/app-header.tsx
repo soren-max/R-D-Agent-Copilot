@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { TraceData, EvaluationResult, ToolResult } from "@/lib/api";
 
 type AppHeaderProps = {
@@ -21,6 +22,18 @@ export function AppHeader({ evaluation, trace, toolResults }: AppHeaderProps) {
           <p className="text-xs text-slate-400">AI 研发排障智能助手</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/"
+            className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            实时排障
+          </Link>
+          <Link
+            href="/runs"
+            className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            历史记录
+          </Link>
           <span className="badge-green"><span className="dot-green" /> LangGraph</span>
           <span className="badge-slate"><span className="dot-green" /> LocalAdapter</span>
           <span className="badge-blue"><span className="dot-amber" /> DeepSeek Optional</span>

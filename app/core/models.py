@@ -94,6 +94,10 @@ class TraceStep(BaseModel):
     latency_ms: int = Field(default=0, description="该阶段耗时（毫秒）")
     llm_used: bool = Field(default=False, description="synthesizer 阶段是否使用 LLM")
     llm_error: str = Field(default="", description="synthesizer 阶段的 LLM 错误")
+    prompt_version: str = Field(
+        default="",
+        description="synthesizer 阶段使用的 prompt 版本",
+    )
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",

@@ -132,6 +132,7 @@ def test_day7_monkeypatched_llm_success_generates_chinese_answer(monkeypatch):
     assert data["llm_error"] is None
     assert _has_chinese(data["answer"])
     assert _stage(data, "synthesizer")["engine"] == "deepseek"
+    assert _stage(data, "synthesizer")["prompt_version"] == "synthesizer_prompt_v1"
 
 
 def test_day7_env_files_do_not_commit_real_api_key():

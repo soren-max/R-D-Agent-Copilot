@@ -13,7 +13,12 @@ from typing import Any
 
 from app.core.llm import LLMClient, LLMClientError, LLMDisabledError, MissingAPIKeyError
 from app.core.models import Plan, RouterResult, ToolCallRecord
-from app.core.prompt import ANSWER_SYSTEM_PROMPT, build_answer_user_prompt
+from app.core.prompt import (
+    ANSWER_SYSTEM_PROMPT,
+    FALLBACK_PROMPT_VERSION,
+    SYNTHESIZER_PROMPT_VERSION,
+    build_answer_user_prompt,
+)
 
 
 def _to_dict(value: Any) -> dict[str, Any]:
@@ -84,6 +89,7 @@ class AnswerSynthesizer:
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": "llm_disabled",
+                "prompt_version": FALLBACK_PROMPT_VERSION,
             }
 
         try:
@@ -103,6 +109,7 @@ class AnswerSynthesizer:
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": _llm_error_code(exc),
+                "prompt_version": FALLBACK_PROMPT_VERSION,
             }
 
         return {
@@ -110,6 +117,7 @@ class AnswerSynthesizer:
             "answer_source": "llm",
             "llm_used": True,
             "llm_error": None,
+            "prompt_version": SYNTHESIZER_PROMPT_VERSION,
         }
 
 

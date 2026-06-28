@@ -77,6 +77,7 @@ function TimelineStep({ step, index }: { step: TraceStep; index: number }) {
       {step.stage === "synthesizer" && (
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
           <span>LLM: {step.llm_used ? "是" : "否"}</span>
+          {step.prompt_version && <span>Prompt: {step.prompt_version}</span>}
           {step.llm_error && <span className="text-red-500">错误: {step.llm_error}</span>}
         </div>
       )}
@@ -165,6 +166,7 @@ function SynthesizerSummaryPanel({ step }: { step?: TraceStep }) {
       <div className="mt-2 grid gap-3 sm:grid-cols-3">
         <MetricCard label="引擎" value={engineLabel(step.engine)} />
         <MetricCard label="使用 LLM" value={step.llm_used ? "是" : "否"} />
+        <MetricCard label="Prompt 版本" value={step.prompt_version || "未记录"} />
         <MetricCard label="耗时" value={`${step.latency_ms ?? 0}ms`} />
       </div>
       {step.llm_error && (

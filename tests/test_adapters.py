@@ -36,8 +36,8 @@ def test_local_log_adapter_search_logs_returns_adapter_result():
     assert isinstance(result, AdapterResult)
     assert_adapter_result_contract(
         result,
-        "local_log_adapter",
-        "data/logs/order-service.log",
+        "mock_api_log_adapter",
+        "mock_api:/mock/logs",
     )
     assert "order-service" in result.data
     assert "status=500" in result.data
@@ -50,8 +50,8 @@ def test_local_config_adapter_compare_configs_returns_adapter_result():
     assert isinstance(result, AdapterResult)
     assert_adapter_result_contract(
         result,
-        "local_config_adapter",
-        "data/configs/dev.json,data/configs/prod.json",
+        "mock_api_config_adapter",
+        "mock_api:/mock/configs",
     )
     assert "payment.timeout" in result.data
     assert "feature.enable_new_payment_flow" in result.data
@@ -64,8 +64,8 @@ def test_local_git_adapter_search_commits_returns_adapter_result():
     assert isinstance(result, AdapterResult)
     assert_adapter_result_contract(
         result,
-        "local_git_adapter",
-        "data/git/commits.json",
+        "mock_api_git_adapter",
+        "mock_api:/mock/git/commits",
     )
     assert "mock-a1b2c3d" in result.data
     assert "payment-service timeout" in result.data

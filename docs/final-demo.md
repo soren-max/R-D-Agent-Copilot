@@ -120,7 +120,7 @@ python scripts/demo_final.py
 - 不是聊天套壳：系统不是直接把用户问题丢给 LLM，而是经过 Router、Planner、Executor、Tools、Trace、Synthesizer 和 Evaluation。
 - Router / Planner 分层：Router 只分类，Planner 只生成结构化计划，职责边界清晰。
 - LangGraph 工具编排：LangGraph 只在 Executor 内部负责编排工具节点、条件执行、retry、fallback 和节点 trace。
-- API Adapter 可扩展：当前使用 LocalAdapter 读取本地样例数据，后续可以替换真实日志平台、配置中心和 Git API。
+- API Adapter 可扩展：当前使用 LocalAdapter 调用本地 Mock API Server，后续可以替换真实日志平台、配置中心和 Git API。
 - Trace 持久化：每次 `/chat` 会保存 run、step 和 tool call，支持 `/runs` 和 `/runs/{run_id}` 查询。
 - Evaluation 质量评分：回答生成后，用 rule-based 指标评估工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时。
 - DeepSeek 只用于最终回答生成：DeepSeek 不控制 Router、Planner 或 Tool Selection，默认关闭并支持 fallback。

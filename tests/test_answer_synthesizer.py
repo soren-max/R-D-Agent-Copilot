@@ -31,6 +31,7 @@ def test_chat_uses_fallback_when_llm_disabled_and_does_not_call_deepseek(monkeyp
     synthesizer_step = [s for s in data["trace"]["steps"] if s["stage"] == "synthesizer"][0]
     assert synthesizer_step["engine"] == "fallback"
     assert synthesizer_step["llm_used"] is False
+    assert synthesizer_step["prompt_version"] == "fallback_prompt_v1"
 
 
 def test_chat_falls_back_when_llm_enabled_without_api_key(monkeypatch):
@@ -47,6 +48,7 @@ def test_chat_falls_back_when_llm_enabled_without_api_key(monkeypatch):
     synthesizer_step = [s for s in data["trace"]["steps"] if s["stage"] == "synthesizer"][0]
     assert synthesizer_step["engine"] == "fallback"
     assert synthesizer_step["llm_error"] == "missing_api_key"
+    assert synthesizer_step["prompt_version"] == "fallback_prompt_v1"
 
 
 def test_chat_uses_mocked_llm_answer_for_complex_troubleshooting(monkeypatch):
@@ -78,6 +80,7 @@ def test_chat_uses_mocked_llm_answer_for_complex_troubleshooting(monkeypatch):
     synthesizer_step = [s for s in data["trace"]["steps"] if s["stage"] == "synthesizer"][0]
     assert synthesizer_step["engine"] == "deepseek"
     assert synthesizer_step["llm_used"] is True
+    assert synthesizer_step["prompt_version"] == "synthesizer_prompt_v1"
 
 
 def test_chat_falls_back_when_llm_generate_raises(monkeypatch):
@@ -101,6 +104,7 @@ def test_chat_falls_back_when_llm_generate_raises(monkeypatch):
     assert synthesizer_step["engine"] == "fallback"
     assert synthesizer_step["llm_used"] is False
     assert synthesizer_step["llm_error"] == "RuntimeError"
+    assert synthesizer_step["prompt_version"] == "fallback_prompt_v1"
 
 
 def test_simple_qa_and_complex_troubleshooting_both_pass_with_fallback(monkeypatch):

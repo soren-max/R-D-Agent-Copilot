@@ -6,6 +6,9 @@ import json
 from typing import Any
 
 
+SYNTHESIZER_PROMPT_VERSION = "synthesizer_prompt_v1"
+FALLBACK_PROMPT_VERSION = "fallback_prompt_v1"
+
 ANSWER_SYSTEM_PROMPT = (
     "你是一个研发排障智能助手。你只能根据输入的工具结果、知识库检索结果和执行链路生成中文回答。"
     "禁止编造工具结果之外的信息。回答必须结构清晰，包含初步判断、证据、建议处理方式。"

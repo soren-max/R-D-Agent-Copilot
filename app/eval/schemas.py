@@ -20,8 +20,21 @@ class EvaluationMetrics(BaseModel):
     latency_score: float
 
 
+class LatencyBreakdown(BaseModel):
+    router_ms: int = 0
+    planner_ms: int = 0
+    executor_ms: int = 0
+    tools_ms: int = 0
+    synthesizer_ms: int = 0
+    evaluation_ms: int = 0
+    total_ms: int = 0
+    bottleneck_stage: str = "unknown"
+    bottleneck_ms: int = 0
+
+
 class EvaluationResult(BaseModel):
     overall_score: float
     metrics: EvaluationMetrics
+    latency_breakdown: LatencyBreakdown = Field(default_factory=LatencyBreakdown)
     issues: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
