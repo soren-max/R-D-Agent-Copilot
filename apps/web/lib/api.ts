@@ -2,6 +2,7 @@ export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8005";
 
 export const CHAT_ENDPOINT = `${API_BASE_URL}/chat`;
+export const CHAT_STREAM_ENDPOINT = `${API_BASE_URL}/chat/stream`;
 export const RUNS_ENDPOINT = `${API_BASE_URL}/runs`;
 
 export type RouteResult = {
@@ -135,6 +136,35 @@ export type ChatResponse = {
   evidence_chain?: EvidenceChain | null;
 };
 
+export type StreamEventName =
+  | "router_started"
+  | "router_completed"
+  | "planner_started"
+  | "planner_completed"
+  | "executor_started"
+  | "tool_started"
+  | "tool_completed"
+  | "synthesizer_started"
+  | "synthesizer_completed"
+  | "evaluation_started"
+  | "evaluation_completed"
+  | "completed"
+  | "error";
+
+export type AgentStreamEvent = {
+  event: StreamEventName | string;
+  timestamp?: string;
+  message?: string;
+  tool_name?: string;
+  status?: string;
+  latency_ms?: number;
+  run_id?: string;
+  answer?: string;
+  evaluation?: EvaluationResult | null;
+  response?: ChatResponse;
+  error?: string;
+};
+
 export type RunSummary = {
   run_id: string;
   query: string;
@@ -191,6 +221,10 @@ export async function postChat(query: string): Promise<ChatResponse> {
   }
 
   return response.json();
+}
+
+export function chatStreamUrl(query: string): string {
+  return `${CHAT_STREAM_ENDPOINT}?query=${encodeURIComponent(query)}`;
 }
 
 export async function fetchRuns(limit = 30): Promise<RunSummary[]> {
