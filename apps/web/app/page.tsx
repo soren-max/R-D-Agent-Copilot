@@ -15,6 +15,7 @@ import { EvaluationPanel } from "@/components/evaluation-panel";
 import { StreamingTimeline } from "@/components/streaming-timeline";
 import { EvidencePanel } from "@/components/evidence-panel";
 import { RagPanel } from "@/components/rag-panel";
+import { LLMUsageCard } from "@/components/llm-usage-card";
 import { type AgentStreamEvent, type ChatResponse, chatStreamUrl, postChat } from "@/lib/api";
 
 const examples = ["什么是配置中心？", "为什么订单接口报500？", "配置改了为什么不生效？"];
@@ -186,6 +187,7 @@ export default function Home() {
             <div className="space-y-4 lg:sticky lg:top-[88px]">
               <AgentPipeline route={result?.route} trace={result?.trace} isLoading={isLoading} />
               <RunSummary result={result} isLoading={isLoading} />
+              <LLMUsageCard usage={result?.llm_usage} llmUsed={result?.llm_used} />
             </div>
           </aside>
         </div>

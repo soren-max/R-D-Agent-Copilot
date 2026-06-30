@@ -9,9 +9,19 @@
 
 from __future__ import annotations
 
+import time
+from dataclasses import replace
 from typing import Any
 
-from app.core.llm import LLMClient, LLMClientError, LLMDisabledError, MissingAPIKeyError
+from app.core.llm import (
+    LLMClient,
+    LLMClientError,
+    LLMDisabledError,
+    LLMGeneration,
+    MissingAPIKeyError,
+    estimated_usage,
+    zero_usage,
+)
 from app.core.models import Plan, RouterResult, ToolCallRecord
 from app.core.prompt import (
     ANSWER_SYSTEM_PROMPT,
@@ -113,27 +123,48 @@ class AnswerSynthesizer:
                 "llm_used": False,
                 "llm_error": "llm_disabled",
                 "prompt_version": FALLBACK_PROMPT_VERSION,
+                "llm_usage": zero_usage(self.llm_client.settings, source="llm_disabled").model_dump(),
             }
 
+        system_prompt = ANSWER_SYSTEM_PROMPT
+        user_prompt = build_answer_user_prompt(
+            query=query,
+            route=_to_dict(route),
+            plan=_to_dict(plan),
+            tool_results=_tool_results_to_dicts(tool_results),
+            trace_summary=trace_summary or {},
+        )
+        llm_start = time.perf_counter()
         try:
-            answer = self.llm_client.generate(
-                ANSWER_SYSTEM_PROMPT,
-                build_answer_user_prompt(
-                    query=query,
-                    route=_to_dict(route),
-                    plan=_to_dict(plan),
-                    tool_results=_tool_results_to_dicts(tool_results),
-                    trace_summary=trace_summary or {},
-                ),
-            )
+            generation = self.llm_client.generate(system_prompt, user_prompt)
         except Exception as exc:
+            llm_latency_ms = int((time.perf_counter() - llm_start) * 1000)
             return {
                 "answer": fallback_answer,
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": _llm_error_code(exc),
                 "prompt_version": FALLBACK_PROMPT_VERSION,
+                "llm_usage": zero_usage(
+                    self.llm_client.settings,
+                    source="fallback",
+                    latency_ms=llm_latency_ms,
+                ).model_dump(),
             }
+
+        llm_latency_ms = int((time.perf_counter() - llm_start) * 1000)
+        if isinstance(generation, LLMGeneration):
+            answer = generation.content
+            usage = replace(generation.usage, latency_ms=llm_latency_ms)
+        else:
+            answer = str(generation)
+            usage = estimated_usage(
+                self.llm_client.settings,
+                system_prompt,
+                user_prompt,
+                answer,
+                latency_ms=llm_latency_ms,
+            )
 
         return {
             "answer": answer,
@@ -141,6 +172,7 @@ class AnswerSynthesizer:
             "llm_used": True,
             "llm_error": None,
             "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+            "llm_usage": usage.model_dump(),
         }
 
 

@@ -58,6 +58,18 @@ export type RagMetadata = {
   vector_available?: boolean;
 };
 
+export type LLMUsage = {
+  provider?: string;
+  model?: string;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  estimated_cost?: number;
+  currency?: string;
+  latency_ms?: number;
+  source?: "api_usage" | "estimated" | "llm_disabled" | "fallback" | string;
+};
+
 export type EvidenceItem = {
   id: string;
   type: "log" | "config" | "git" | "rag" | "evaluation" | string;
@@ -122,6 +134,7 @@ export type TraceStep = {
   retrieved_count?: number | null;
   grounding_status?: string;
   retrieval_latency_ms?: number | null;
+  llm_usage?: LLMUsage | null;
 };
 
 export type TraceData = {
@@ -165,6 +178,7 @@ export type ChatResponse = {
   answer_source: "fallback" | "llm" | string;
   llm_used: boolean;
   llm_error?: string | null;
+  llm_usage?: LLMUsage | null;
   route: RouteResult;
   plan: PlanResult;
   tool_results: ToolResult[];
@@ -199,6 +213,7 @@ export type AgentStreamEvent = {
   answer?: string;
   evaluation?: EvaluationResult | null;
   response?: ChatResponse;
+  llm_usage?: LLMUsage | null;
   error?: string;
 };
 

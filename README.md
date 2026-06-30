@@ -141,7 +141,7 @@ DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，
 
 前端会优先展示实时执行流；如果 SSE 失败，会提示“流式执行失败，已切换为普通请求。”并 fallback 到 `/chat`。
 
-## RAG Pipeline And Evaluation
+## RAG Pipeline
 
 RAG 只读取 `data/docs/*.md`，通过 Markdown 标题、段落和代码块边界生成 chunk，并为每个 chunk 保留 `source`、`title`、`section`、`chunk_id`、`doc_type` 和 `updated_at` metadata。检索层提供 deterministic local vector search、keyword fallback 和 hybrid retrieval，不调用外部向量库、embedding 服务或企业 API。
 
@@ -186,6 +186,18 @@ python scripts/eval_rag.py
 ```
 
 脚本读取 `eval/rag_eval_cases.jsonl`，输出 `Recall@3`、`Recall@5`、`Hit Rate`、`MRR`、`average_latency_ms` 和 `failed_cases`，并将低分样本写入 `data/reports/rag_eval_failed_cases.json`。
+
+## Grounding Guard
+
+- 检索为空或最高分低于阈值时，设置 `grounding_status = insufficient_evidence`。
+- Answer Synthesizer 在证据不足时不调用 DeepSeek，返回固定安全回答。
+- grounding_status 通过 tool_results、executor trace 和前端 RAG Panel 展示。
+
+## LLM Usage Tracking
+
+系统会在 Answer Synthesizer 阶段记录 DeepSeek 调用的 token usage、LLM latency 和 estimated cost，并返回到 `/chat` 的 `llm_usage` 字段，同时写入 Trace 的 synthesizer step。
+
+如果 API response 包含 usage，系统使用真实 token usage；如果没有 usage，则按字符数粗略估算 token。成本估算只用于本地演示，不作为真实计费依据；当前价格常量为演示占位值，未联网查询价格。LLM disabled 或 fallback 时 token 和 cost 为 0。
 
 ## Demo Queries
 

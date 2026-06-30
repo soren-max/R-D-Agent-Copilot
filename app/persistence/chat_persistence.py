@@ -112,6 +112,7 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         "llm_used": trace_step.llm_used,
         "llm_error": trace_step.llm_error,
         "prompt_version": trace_step.prompt_version,
+        "llm_usage": trace_step.llm_usage,
     }
     if trace_step.stage == "router":
         data["route"] = response.route.model_dump()
@@ -125,6 +126,7 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         data["answer_source"] = response.answer_source
         data["llm_used"] = response.llm_used
         data["llm_error"] = response.llm_error
+        data["llm_usage"] = response.llm_usage
     elif trace_step.stage == "evaluation":
         data["overall_score"] = trace_step.overall_score
         data["evaluation_error"] = trace_step.evaluation_error
