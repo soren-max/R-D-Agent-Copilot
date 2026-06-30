@@ -39,6 +39,7 @@ class Tracer:
         llm_used: bool = False,
         llm_error: str = "",
         prompt_version: str = "",
+        llm_usage: dict[str, Any] | None = None,
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -54,6 +55,7 @@ class Tracer:
             llm_used=llm_used,
             llm_error=llm_error,
             prompt_version=prompt_version,
+            llm_usage=llm_usage,
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
             fallback_used=fallback_used,
@@ -98,6 +100,7 @@ class Tracer:
         llm_used: bool,
         llm_error: str | None,
         prompt_version: str = "",
+        llm_usage: dict[str, Any] | None = None,
     ) -> None:
         """记录 synthesizer 阶段的 LLM 使用情况。"""
         self.end_stage(
@@ -107,6 +110,7 @@ class Tracer:
             llm_used=llm_used,
             llm_error=llm_error or "",
             prompt_version=prompt_version,
+            llm_usage=llm_usage,
         )
 
     def set_final_answer(self, answer: str) -> None:

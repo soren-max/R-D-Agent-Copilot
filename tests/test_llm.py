@@ -112,3 +112,49 @@ def test_generate_uses_openai_compatible_deepseek_settings():
             {"role": "user", "content": "user"},
         ],
     }
+
+
+def test_generate_extracts_usage_from_openai_compatible_response():
+    class FakeMessage:
+        content = "生成结果"
+
+    class FakeChoice:
+        message = FakeMessage()
+
+    class FakeUsage:
+        prompt_tokens = 12
+        completion_tokens = 3
+        total_tokens = 15
+
+    class FakeResponse:
+        choices = [FakeChoice()]
+        usage = FakeUsage()
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return FakeResponse()
+
+    class FakeChat:
+        completions = FakeCompletions()
+
+    class FakeOpenAIClient:
+        chat = FakeChat()
+
+    def openai_factory(**kwargs):
+        return FakeOpenAIClient()
+
+    settings = LLMSettings(
+        enabled=True,
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        base_url="https://api.deepseek.com",
+        deepseek_api_key="test-api-key",
+    )
+
+    result = LLMClient(settings, openai_factory=openai_factory).generate("system", "user")
+
+    assert result == "生成结果"
+    assert result.usage.prompt_tokens == 12
+    assert result.usage.completion_tokens == 3
+    assert result.usage.total_tokens == 15
+    assert result.usage.source == "api_usage"
