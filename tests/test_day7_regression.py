@@ -44,6 +44,7 @@ def test_day7_simple_qa_end_to_end_with_skipped_nodes(monkeypatch):
         "executor",
         "synthesizer",
         "evaluation",
+        "evidence",
     ]
 
     executor_step = _stage(data, "executor")

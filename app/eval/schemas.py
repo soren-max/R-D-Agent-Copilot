@@ -18,6 +18,7 @@ class EvaluationMetrics(BaseModel):
     rag_relevance: float
     answer_groundedness: float
     latency_score: float
+    evidence_confidence_score: float | None = None
 
 
 class LatencyBreakdown(BaseModel):

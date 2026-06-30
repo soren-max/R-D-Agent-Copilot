@@ -90,9 +90,10 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert data["trace"]["trace_id"]
     assert data["trace"]["final_answer"] == data["answer"]
     assert data["evaluation"] is not None
+    assert data["evidence_chain"] is not None
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
-    assert trace_stages == ["router", "planner", "executor", "synthesizer", "evaluation"]
+    assert trace_stages == ["router", "planner", "executor", "synthesizer", "evaluation", "evidence"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
@@ -101,6 +102,10 @@ def test_chat_api_returns_day1_acceptance_shape():
         for tool_call in executor_step["tool_calls"]
     )
     assert executor_step["skipped_nodes"] == []
+    evidence_step = [step for step in data["trace"]["steps"] if step["stage"] == "evidence"][0]
+    assert evidence_step["engine"] == "rule_based"
+    assert 0 <= evidence_step["overall_confidence"] <= 1
+    assert evidence_step["evidence_count"] == len(data["evidence_chain"]["evidence_items"])
 
 
 def test_troubleshooting_pipeline_executes_tools_and_trace():
