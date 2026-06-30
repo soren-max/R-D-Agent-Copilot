@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.evidence.schemas import EvidenceChain
 from app.eval.schemas import EvaluationResult
 
 
@@ -118,6 +119,14 @@ class TraceStep(BaseModel):
         default="",
         description="evaluation 阶段的脱敏错误标记",
     )
+    overall_confidence: float | None = Field(
+        default=None,
+        description="evidence 阶段的总体置信度",
+    )
+    evidence_count: int | None = Field(
+        default=None,
+        description="evidence 阶段生成的证据数量",
+    )
 
 
 class TraceData(BaseModel):
@@ -161,4 +170,8 @@ class ChatResponse(BaseModel):
     evaluation: EvaluationResult | None = Field(
         default=None,
         description="Agent 执行质量评估结果",
+    )
+    evidence_chain: EvidenceChain | None = Field(
+        default=None,
+        description="证据链与置信度结果",
     )

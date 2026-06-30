@@ -32,6 +32,28 @@ export type ToolResult = {
   latency_ms?: number;
 };
 
+export type EvidenceItem = {
+  id: string;
+  type: "log" | "config" | "git" | "rag" | "evaluation" | string;
+  source?: string;
+  summary: string;
+  confidence: number;
+  related_tool?: string;
+};
+
+export type RootCauseCandidate = {
+  title: string;
+  confidence: number;
+  supporting_evidence_ids?: string[];
+  reason: string;
+};
+
+export type EvidenceChain = {
+  overall_confidence: number;
+  root_cause_candidates?: RootCauseCandidate[];
+  evidence_items?: EvidenceItem[];
+};
+
 export type TraceToolCall = {
   node?: string;
   tool_name?: string;
@@ -76,6 +98,7 @@ export type EvaluationMetrics = {
   rag_relevance?: number;
   answer_groundedness?: number;
   latency_score?: number;
+  evidence_confidence_score?: number | null;
 };
 
 export type LatencyBreakdown = {
@@ -109,6 +132,7 @@ export type ChatResponse = {
   tool_results: ToolResult[];
   trace?: TraceData;
   evaluation?: EvaluationResult | null;
+  evidence_chain?: EvidenceChain | null;
 };
 
 export type RunSummary = {

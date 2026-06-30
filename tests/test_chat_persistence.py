@@ -55,6 +55,7 @@ def test_agent_steps_include_pipeline_stages():
         "executor",
         "synthesizer",
         "evaluation",
+        "evidence",
     ]
     executor_step = [step for step in run["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"

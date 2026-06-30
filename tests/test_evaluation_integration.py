@@ -38,8 +38,8 @@ def test_trace_steps_include_evaluation_stage():
 
     stages = [step["stage"] for step in data["trace"]["steps"]]
 
-    assert stages == ["router", "planner", "executor", "synthesizer", "evaluation"]
-    evaluation_step = data["trace"]["steps"][-1]
+    assert stages == ["router", "planner", "executor", "synthesizer", "evaluation", "evidence"]
+    evaluation_step = [step for step in data["trace"]["steps"] if step["stage"] == "evaluation"][0]
     assert evaluation_step["engine"] == "rule_based"
     assert 0 <= evaluation_step["overall_score"] <= 1
 
@@ -97,9 +97,9 @@ def test_evaluation_failure_does_not_break_chat(monkeypatch):
     assert data["answer"]
     assert data["evaluation"] is None
     assert data["trace"]["evaluation_error"] == "evaluation_failed"
-    assert data["trace"]["steps"][-1]["stage"] == "evaluation"
-    assert data["trace"]["steps"][-1]["evaluation_error"] == "evaluation_failed"
-    assert "secret" not in data["trace"]["steps"][-1]["evaluation_error"]
+    evaluation_step = [step for step in data["trace"]["steps"] if step["stage"] == "evaluation"][0]
+    assert evaluation_step["evaluation_error"] == "evaluation_failed"
+    assert "secret" not in evaluation_step["evaluation_error"]
 
 
 def test_evaluation_passes_without_real_deepseek_api(monkeypatch):

@@ -92,6 +92,15 @@ def _stage_input_json(
             "tool_results": [result.model_dump() for result in response.tool_results],
             "answer": response.answer,
         }
+    if stage == "evidence":
+        return {
+            "query": request.query,
+            "route": response.route.model_dump(),
+            "plan": response.plan.model_dump(),
+            "tool_results": [result.model_dump() for result in response.tool_results],
+            "answer": response.answer,
+            "evaluation": response.evaluation.model_dump() if response.evaluation else None,
+        }
     return {"query": request.query}
 
 
@@ -120,6 +129,10 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         data["overall_score"] = trace_step.overall_score
         data["evaluation_error"] = trace_step.evaluation_error
         data["evaluation"] = response.evaluation.model_dump() if response.evaluation else None
+    elif trace_step.stage == "evidence":
+        data["overall_confidence"] = trace_step.overall_confidence
+        data["evidence_count"] = trace_step.evidence_count
+        data["evidence_chain"] = response.evidence_chain.model_dump() if response.evidence_chain else None
     return data
 
 
