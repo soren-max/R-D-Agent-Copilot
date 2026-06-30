@@ -13,6 +13,7 @@ import { ToolEvidenceGrid } from "@/components/tool-evidence-grid";
 import { TraceViewer } from "@/components/trace-viewer";
 import { EvaluationPanel } from "@/components/evaluation-panel";
 import { StreamingTimeline } from "@/components/streaming-timeline";
+import { EvidencePanel } from "@/components/evidence-panel";
 import { type AgentStreamEvent, type ChatResponse, chatStreamUrl, postChat } from "@/lib/api";
 
 const examples = ["什么是配置中心？", "为什么订单接口报500？", "配置改了为什么不生效？"];
@@ -172,6 +173,7 @@ export default function Home() {
 
                 <PlanViewer steps={result.plan?.steps} routeType={routeType} />
                 <ToolEvidenceGrid toolResults={result.tool_results} />
+                <EvidencePanel evidenceChain={result.evidence_chain} />
                 <TraceViewer trace={result.trace} routeType={routeType} />
                 <EvaluationPanel evaluation={result.evaluation} />
               </>

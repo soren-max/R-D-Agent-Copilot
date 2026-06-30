@@ -10,9 +10,10 @@ const metricLabels: Record<keyof EvaluationMetrics, string> = {
   rag_relevance: "知识库相关性",
   answer_groundedness: "回答证据性",
   latency_score: "响应耗时评分",
+  evidence_confidence_score: "证据链置信度",
 };
 
-function toPercent(value: number | undefined) {
+function toPercent(value: number | null | undefined) {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
   return `${Math.round(value * 100)}%`;
 }

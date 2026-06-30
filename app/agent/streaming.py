@@ -11,6 +11,7 @@ from app.core.events import sse_event
 from app.core.models import ChatRequest, ChatResponse, TraceStep
 from app.core.trace import Tracer
 from app.eval import RuleBasedEvaluator
+from app.evidence import EvidenceChainBuilder
 from app.persistence.chat_persistence import persist_chat_response
 
 
@@ -173,6 +174,46 @@ def stream_pipeline(request: ChatRequest) -> Iterator[str]:
                     "status": "failed",
                     "error": "evaluation_failed",
                 },
+            )
+
+        evidence_start = time.perf_counter()
+        try:
+            response.evidence_chain = EvidenceChainBuilder().build(
+                {
+                    "query": request.query,
+                    "route": response.route.model_dump(),
+                    "plan": response.plan.model_dump(),
+                    "tool_results": [result.model_dump() for result in response.tool_results],
+                    "trace": response.trace.model_dump(),
+                    "answer": response.answer,
+                    "evaluation": response.evaluation.model_dump() if response.evaluation else None,
+                }
+            )
+            if response.evaluation is not None:
+                response.evaluation.metrics.evidence_confidence_score = response.evidence_chain.overall_confidence
+            evidence_latency_ms = int((time.perf_counter() - evidence_start) * 1000)
+            response.trace.steps.append(
+                TraceStep(
+                    stage="evidence",
+                    engine="rule_based",
+                    output=f"overall_confidence={response.evidence_chain.overall_confidence}",
+                    latency_ms=evidence_latency_ms,
+                    overall_confidence=response.evidence_chain.overall_confidence,
+                    evidence_count=len(response.evidence_chain.evidence_items),
+                )
+            )
+        except Exception:
+            evidence_latency_ms = int((time.perf_counter() - evidence_start) * 1000)
+            response.evidence_chain = None
+            response.trace.steps.append(
+                TraceStep(
+                    stage="evidence",
+                    engine="rule_based",
+                    output="evidence_failed",
+                    latency_ms=evidence_latency_ms,
+                    overall_confidence=0.0,
+                    evidence_count=0,
+                )
             )
 
         try:

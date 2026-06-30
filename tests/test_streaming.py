@@ -108,3 +108,4 @@ def test_chat_stream_does_not_call_real_deepseek_api():
 
     assert completed["response"]["llm_used"] is False
     assert completed["response"]["answer_source"] == "fallback"
+    assert completed["response"]["evidence_chain"] is not None
