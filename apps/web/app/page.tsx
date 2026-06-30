@@ -12,7 +12,8 @@ import { RunSummary } from "@/components/run-summary";
 import { ToolEvidenceGrid } from "@/components/tool-evidence-grid";
 import { TraceViewer } from "@/components/trace-viewer";
 import { EvaluationPanel } from "@/components/evaluation-panel";
-import { type ChatResponse, postChat } from "@/lib/api";
+import { StreamingTimeline } from "@/components/streaming-timeline";
+import { type AgentStreamEvent, type ChatResponse, chatStreamUrl, postChat } from "@/lib/api";
 
 const examples = ["什么是配置中心？", "为什么订单接口报500？", "配置改了为什么不生效？"];
 
@@ -20,6 +21,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<ChatResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamEvents, setStreamEvents] = useState<AgentStreamEvent[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -31,16 +34,76 @@ export default function Home() {
       return;
     }
     setIsLoading(true);
+    setIsStreaming(true);
     setError("");
     setNotice("");
-    try {
-      const data = await postChat(trimmed);
-      setResult(data);
-    } catch {
-      setError("请求失败，请确认后端服务是否已启动。");
-    } finally {
-      setIsLoading(false);
-    }
+    setResult(null);
+    setStreamEvents([]);
+
+    let completed = false;
+    let fallbackStarted = false;
+    const source = new EventSource(chatStreamUrl(trimmed));
+
+    const appendEvent = (event: AgentStreamEvent) => {
+      setStreamEvents((items) => [...items, event]);
+    };
+
+    const fallbackToChat = async () => {
+      if (fallbackStarted || completed) return;
+      fallbackStarted = true;
+      source.close();
+      setIsStreaming(false);
+      setNotice("流式执行失败，已切换为普通请求。");
+      try {
+        const data = await postChat(trimmed);
+        setResult(data);
+      } catch {
+        setError("请求失败，请确认后端服务是否已启动。");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const bind = (eventName: string) => {
+      source.addEventListener(eventName, (message) => {
+        const data = JSON.parse((message as MessageEvent).data) as AgentStreamEvent;
+        appendEvent({ ...data, event: eventName });
+
+        if (eventName === "completed") {
+          completed = true;
+          source.close();
+          setIsStreaming(false);
+          if (data.response) {
+            setResult(data.response);
+          }
+          setIsLoading(false);
+        }
+
+        if (eventName === "error") {
+          void fallbackToChat();
+        }
+      });
+    };
+
+    [
+      "router_started",
+      "router_completed",
+      "planner_started",
+      "planner_completed",
+      "executor_started",
+      "tool_started",
+      "tool_completed",
+      "synthesizer_started",
+      "synthesizer_completed",
+      "evaluation_started",
+      "evaluation_completed",
+      "completed",
+      "error",
+    ].forEach(bind);
+
+    source.onerror = () => {
+      void fallbackToChat();
+    };
   }
 
   const routeType = result?.route?.type;
@@ -89,6 +152,8 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            <StreamingTimeline events={streamEvents} isStreaming={isStreaming} />
 
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50/70 px-4 py-3 text-sm font-medium text-red-700">
