@@ -1,173 +1,201 @@
 """
-轻量本地知识库检索器。
+Production-style local RAG retriever.
 
 职责边界：
 - 只读取 data/docs 下的本地 Markdown
-- 只做确定性的关键词检索
+- 支持 Markdown ingestion、chunk metadata、vector/keyword/hybrid retrieval
 - 不生成最终答案，不调用 LLM，不访问外部服务
 """
 
 from __future__ import annotations
 
-import re
-import string
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-DOCS_SOURCE = "data/docs"
+import time
+
+from app.rag.ingestion import DOCS_SOURCE, MarkdownIngestionPipeline, RagChunk
+from app.rag.vector_store import LocalVectorStore, RetrievalHit, keyword_score, metadata_matches
+
 DOCS_DIR = Path(__file__).resolve().parents[2] / DOCS_SOURCE
-
-_CHINESE_PUNCTUATION = "，。！？；：、“”‘’（）【】《》、"
-_STOP_WORDS = {
-    "什么",
-    "如何",
-    "为什么",
-    "怎么",
-    "一个",
-    "一下",
-    "the",
-    "and",
-    "or",
-    "is",
-}
-
-
-@dataclass(frozen=True)
-class DocumentChunk:
-    doc_id: str
-    source: str
-    content: str
+DEFAULT_SCORE_THRESHOLD = 0.12
 
 
 class LocalKnowledgeRetriever:
-    """基于本地 Markdown 文档的确定性关键词检索器。"""
+    """基于本地 Markdown 文档的确定性 RAG 检索器。"""
 
     def __init__(self, docs_dir: Path | None = None):
         self.docs_dir = docs_dir or DOCS_DIR
+        self._chunks: list[RagChunk] | None = None
+        self._vector_store: LocalVectorStore | None = None
 
-    def retrieve(self, query: str, top_k: int = 3) -> dict[str, Any]:
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 3,
+        score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+        metadata_filter: dict[str, Any] | None = None,
+        retrieval_type: str = "hybrid",
+    ) -> dict[str, Any]:
+        start = time.perf_counter()
         markdown_files = self._markdown_files()
         if not markdown_files:
-            return {
-                "query": query,
-                "documents": [],
-                "error": "knowledge_base_not_found",
-            }
+            return self._empty_result(
+                query=query,
+                top_k=top_k,
+                score_threshold=score_threshold,
+                retrieval_type=retrieval_type,
+                start=start,
+                error="knowledge_base_not_found",
+            )
 
         chunks = self._load_chunks(markdown_files)
-        scored = [
-            (self._score(query, chunk.content), index, chunk)
-            for index, chunk in enumerate(chunks)
-        ]
-        matched = [
-            (score, index, chunk)
-            for score, index, chunk in scored
-            if score > 0
-        ]
-        if not matched:
-            return {
-                "query": query,
-                "documents": [],
-                "error": "no_relevant_documents",
-            }
+        if not chunks:
+            return self._empty_result(
+                query=query,
+                top_k=top_k,
+                score_threshold=score_threshold,
+                retrieval_type=retrieval_type,
+                start=start,
+                error="knowledge_base_empty",
+            )
 
-        matched.sort(key=lambda item: (-item[0], item[1]))
-        documents = [
-            {
-                "doc_id": chunk.doc_id,
-                "source": chunk.source,
-                "content": chunk.content,
-                "score": round(min(score, 1.0), 2),
-            }
-            for score, _, chunk in matched[:top_k]
-        ]
-        return {"query": query, "documents": documents}
+        fallback_used = False
+        vector_available = self._vector_store is not None
+        try:
+            if retrieval_type == "vector":
+                hits = self._vector_hits(query, top_k, score_threshold, metadata_filter)
+            elif retrieval_type == "keyword":
+                hits = self._keyword_hits(query, top_k, score_threshold, metadata_filter)
+            else:
+                vector_hits = self._vector_hits(query, top_k * 2, score_threshold, metadata_filter)
+                keyword_hits = self._keyword_hits(query, top_k * 2, score_threshold, metadata_filter)
+                hits = self._merge_hits(vector_hits, keyword_hits, top_k)
+        except Exception:
+            fallback_used = True
+            vector_available = False
+            hits = self._keyword_hits(query, top_k, score_threshold, metadata_filter)
+
+        if retrieval_type in {"vector", "hybrid"} and not vector_available:
+            fallback_used = True
+
+        documents = [hit.to_document() for hit in hits[:top_k]]
+        grounding_status = self._grounding_status(documents, score_threshold)
+        result = {
+            "query": query,
+            "documents": documents,
+            "retrieval_top_k": top_k,
+            "score_threshold": score_threshold,
+            "retrieved_count": len(documents),
+            "grounding_status": grounding_status,
+            "retrieval_latency_ms": int((time.perf_counter() - start) * 1000),
+            "retrieval_type": "keyword" if fallback_used and retrieval_type != "keyword" else retrieval_type,
+            "fallback_used": fallback_used,
+            "vector_available": vector_available,
+        }
+
+        if not documents:
+            result["error"] = "no_relevant_documents"
+        elif grounding_status == "insufficient_evidence":
+            result["error"] = "insufficient_evidence"
+        return result
+
+    def ingest(self) -> list[RagChunk]:
+        return self._load_chunks(self._markdown_files())
 
     def _markdown_files(self) -> list[Path]:
         if not self.docs_dir.exists() or not self.docs_dir.is_dir():
             return []
         return sorted(self.docs_dir.glob("*.md"))
 
-    def _load_chunks(self, markdown_files: list[Path]) -> list[DocumentChunk]:
-        chunks: list[DocumentChunk] = []
-        for path in markdown_files:
-            source = f"{DOCS_SOURCE}/{path.name}"
-            paragraphs = self._split_markdown(path.read_text(encoding="utf-8"))
-            for index, paragraph in enumerate(paragraphs, start=1):
-                chunks.append(
-                    DocumentChunk(
-                        doc_id=f"{path.name}#chunk-{index}",
-                        source=source,
-                        content=paragraph,
-                    )
-                )
-        return chunks
+    def _load_chunks(self, markdown_files: list[Path]) -> list[RagChunk]:
+        if self._chunks is not None:
+            return self._chunks
+        if not markdown_files:
+            self._chunks = []
+            self._vector_store = None
+            return []
+        pipeline = MarkdownIngestionPipeline(self.docs_dir)
+        self._chunks = pipeline.ingest()
+        self._vector_store = LocalVectorStore(self._chunks)
+        return self._chunks
 
-    def _split_markdown(self, text: str) -> list[str]:
-        blocks = [block.strip() for block in re.split(r"\n\s*\n", text) if block.strip()]
-        chunks: list[str] = []
-        for block in blocks:
-            if len(block) <= 500:
-                chunks.append(block)
+    def _vector_hits(
+        self,
+        query: str,
+        top_k: int,
+        score_threshold: float,
+        metadata_filter: dict[str, Any] | None,
+    ) -> list[RetrievalHit]:
+        if self._vector_store is None:
+            return []
+        return self._vector_store.search(query, top_k, score_threshold, metadata_filter)
+
+    def _keyword_hits(
+        self,
+        query: str,
+        top_k: int,
+        score_threshold: float,
+        metadata_filter: dict[str, Any] | None,
+    ) -> list[RetrievalHit]:
+        chunks = self._chunks or []
+        hits = [
+            RetrievalHit(chunk=chunk, score=score, retrieval_type="keyword")
+            for chunk in chunks
+            if metadata_matches(chunk, metadata_filter)
+            for score in [keyword_score(query, chunk.content)]
+            if score >= score_threshold
+        ]
+        hits.sort(key=lambda hit: (-hit.score, hit.chunk.chunk_id))
+        return hits[:top_k]
+
+    def _merge_hits(
+        self,
+        vector_hits: list[RetrievalHit],
+        keyword_hits: list[RetrievalHit],
+        top_k: int,
+    ) -> list[RetrievalHit]:
+        merged: dict[str, RetrievalHit] = {}
+        for hit in vector_hits + keyword_hits:
+            existing = merged.get(hit.chunk.chunk_id)
+            if existing is None:
+                merged[hit.chunk.chunk_id] = hit
                 continue
-            chunks.extend(block[i:i + 500].strip() for i in range(0, len(block), 500))
-        return chunks
+            combined_score = min(1.0, max(existing.score, hit.score) + min(existing.score, hit.score) * 0.15)
+            retrieval_type = "hybrid" if existing.retrieval_type != hit.retrieval_type else existing.retrieval_type
+            merged[hit.chunk.chunk_id] = RetrievalHit(hit.chunk, combined_score, retrieval_type)
 
-    def _score(self, query: str, content: str) -> float:
-        query_normalized = self._normalize(query)
-        content_normalized = self._normalize(content)
-        query_terms = self._terms(query)
+        hits = list(merged.values())
+        hits.sort(key=lambda hit: (-hit.score, hit.chunk.chunk_id))
+        return hits[:top_k]
 
-        score = 0.0
-        for term in query_terms:
-            hits = content_normalized.count(term)
-            if hits:
-                score += 0.2 * min(hits, 3)
+    def _grounding_status(self, documents: list[dict[str, Any]], score_threshold: float) -> str:
+        if not documents:
+            return "insufficient_evidence"
+        top_score = max((float(doc.get("score", 0.0)) for doc in documents), default=0.0)
+        if top_score < score_threshold:
+            return "insufficient_evidence"
+        return "grounded"
 
-        if query_normalized and query_normalized in content_normalized:
-            score += 0.35
-
-        phrase_hits = self._phrase_hits(query, content)
-        score += 0.15 * phrase_hits
-        return score
-
-    def _terms(self, text: str) -> list[str]:
-        normalized = self._normalize(text)
-        raw_terms = [term for term in normalized.split(" ") if term]
-        terms: list[str] = []
-        for term in raw_terms:
-            if term in _STOP_WORDS:
-                continue
-            if len(term) == 1 and not term.isdigit():
-                continue
-            terms.append(term)
-            terms.extend(self._chinese_ngrams(term))
-        terms.extend(self._chinese_ngrams(text))
-        return sorted(set(terms), key=terms.index)
-
-    def _normalize(self, text: str) -> str:
-        lowered = text.lower()
-        separators = string.punctuation + _CHINESE_PUNCTUATION + "\n\t\r"
-        translation = str.maketrans({char: " " for char in separators})
-        return " ".join(lowered.translate(translation).split())
-
-    def _phrase_hits(self, query: str, content: str) -> int:
-        phrases = re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z_][a-zA-Z0-9_=-]*", query)
-        content_lower = content.lower()
-        return sum(1 for phrase in phrases if phrase.lower() in content_lower)
-
-    def _chinese_ngrams(self, text: str) -> list[str]:
-        grams: list[str] = []
-        for sequence in re.findall(r"[\u4e00-\u9fff]{2,}", text):
-            for prefix in ["什么是", "为什么", "如何", "怎么", "什么"]:
-                if sequence.startswith(prefix):
-                    sequence = sequence[len(prefix):]
-                    break
-            if len(sequence) < 2:
-                continue
-            max_size = min(len(sequence), 6)
-            for size in range(2, max_size + 1):
-                for start in range(0, len(sequence) - size + 1):
-                    grams.append(sequence[start:start + size])
-        return grams
+    def _empty_result(
+        self,
+        query: str,
+        top_k: int,
+        score_threshold: float,
+        retrieval_type: str,
+        start: float,
+        error: str,
+    ) -> dict[str, Any]:
+        return {
+            "query": query,
+            "documents": [],
+            "error": error,
+            "retrieval_top_k": top_k,
+            "score_threshold": score_threshold,
+            "retrieved_count": 0,
+            "grounding_status": "insufficient_evidence",
+            "retrieval_latency_ms": int((time.perf_counter() - start) * 1000),
+            "retrieval_type": retrieval_type,
+            "fallback_used": False,
+            "vector_available": False,
+        }

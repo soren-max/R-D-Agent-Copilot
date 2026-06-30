@@ -118,3 +118,23 @@ def test_simple_qa_and_complex_troubleshooting_both_pass_with_fallback(monkeypat
     assert simple["answer_source"] == "fallback"
     assert complex_resp["route"]["type"] == "complex_troubleshooting"
     assert complex_resp["answer_source"] == "fallback"
+
+
+def test_insufficient_evidence_does_not_call_llm(monkeypatch):
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("LLM_ENABLED", "true")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-api-key")
+    calls = {"count": 0}
+
+    def fail_if_called(self, system_prompt, user_prompt):
+        calls["count"] += 1
+        raise AssertionError("DeepSeek should not be called when RAG evidence is insufficient")
+
+    monkeypatch.setattr(synthesizer_module.LLMClient, "generate", fail_if_called)
+
+    response = chat_endpoint(ChatRequest(query="zzzz_unmatched_keyword"))
+    data = response.model_dump()
+
+    assert calls["count"] == 0
+    assert data["answer"] == "当前知识库证据不足，建议补充日志、配置或相关文档后再判断。"
+    assert data["llm_error"] == "insufficient_evidence"

@@ -65,6 +65,7 @@ class Executor:
                 confidence=result.get("confidence", 0.0),
                 source=result.get("source", ""),
                 documents=result.get("documents", []),
+                rag_metadata=result.get("rag_metadata", {}),
                 error=result.get("error", ""),
                 retry_count=result.get("retry_count", 0),
                 latency_ms=result.get("latency_ms", 0),

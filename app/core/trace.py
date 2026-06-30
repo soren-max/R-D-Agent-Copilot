@@ -39,6 +39,7 @@ class Tracer:
         llm_used: bool = False,
         llm_error: str = "",
         prompt_version: str = "",
+        rag_metadata: dict[str, Any] | None = None,
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -57,6 +58,11 @@ class Tracer:
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
             fallback_used=fallback_used,
+            retrieval_top_k=(rag_metadata or {}).get("retrieval_top_k"),
+            score_threshold=(rag_metadata or {}).get("score_threshold"),
+            retrieved_count=(rag_metadata or {}).get("retrieved_count"),
+            grounding_status=(rag_metadata or {}).get("grounding_status", ""),
+            retrieval_latency_ms=(rag_metadata or {}).get("retrieval_latency_ms"),
         ))
 
     def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
@@ -74,10 +80,25 @@ class Tracer:
                     error=result.error,
                     latency_ms=result.latency_ms,
                     source=result.source,
+                    retrieval_top_k=result.rag_metadata.get("retrieval_top_k"),
+                    score_threshold=result.rag_metadata.get("score_threshold"),
+                    retrieved_count=result.rag_metadata.get("retrieved_count"),
+                    grounding_status=result.rag_metadata.get("grounding_status", ""),
+                    retrieval_latency_ms=result.rag_metadata.get("retrieval_latency_ms"),
+                    retrieval_type=result.rag_metadata.get("retrieval_type", ""),
+                    fallback_used=result.rag_metadata.get("fallback_used"),
                 )
                 for result in tool_results
                 if result.tool != "none"
             ]
+        rag_metadata = next(
+            (
+                result.rag_metadata
+                for result in tool_results
+                if result.tool == "rag_retriever" or result.tool_name == "rag_retriever"
+            ),
+            {},
+        )
         skipped_nodes = [
             TraceSkippedNode(**skipped_node)
             for skipped_node in getattr(tool_results, "skipped_nodes", [])
@@ -90,6 +111,7 @@ class Tracer:
             fallback_used=getattr(tool_results, "fallback_used", False),
             engine="langgraph",
             graph_name="tool_execution_graph",
+            rag_metadata=rag_metadata,
         )
 
     def end_synthesizer_stage(

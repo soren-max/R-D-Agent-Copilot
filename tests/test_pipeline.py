@@ -97,6 +97,8 @@ def test_chat_api_returns_day1_acceptance_shape():
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
+    assert executor_step["grounding_status"] == "grounded"
+    assert executor_step["retrieved_count"] is not None
     assert all(
         set(["node", "tool_name", "status", "latency_ms", "source"]).issubset(tool_call)
         for tool_call in executor_step["tool_calls"]
@@ -146,6 +148,8 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert all(call.latency_ms >= 0 for call in executor_step.tool_calls)
     assert all(call.source.startswith("mock_api:") or call.tool_name == "rag_retriever" for call in executor_step.tool_calls)
     assert executor_step.skipped_nodes == []
+    assert executor_step.grounding_status == "grounded"
+    assert executor_step.retrieved_count is not None
     synthesizer_step = [s for s in resp.trace.steps if s.stage == "synthesizer"][0]
     assert synthesizer_step.engine == "fallback"
     assert synthesizer_step.llm_used is False
@@ -178,6 +182,8 @@ def test_executor_executes_tools_and_rag_with_status_latency_and_source():
         for result in results
     )
     assert results[-1].documents
+    assert results[-1].rag_metadata["grounding_status"] == "grounded"
+    assert results[-1].rag_metadata["retrieval_top_k"] == 5
 
 
 def test_executor_returns_failed_status_for_tool_errors():
@@ -424,7 +430,7 @@ def test_chat_rag_no_match_returns_structured_prompt(monkeypatch):
     assert data["route"]["type"] == "simple_qa"
     assert data["tool_results"][0]["status"] == "failed"
     assert data["tool_results"][0]["error"] == "no_relevant_documents"
-    assert "知识库中未检索到直接相关内容" in data["answer"]
+    assert data["answer"] == "当前知识库证据不足，建议补充日志、配置或相关文档后再判断。"
 
 
 def test_trace_id_unique():

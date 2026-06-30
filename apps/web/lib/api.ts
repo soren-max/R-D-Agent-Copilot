@@ -31,6 +31,31 @@ export type ToolResult = {
   source: string;
   result: string;
   latency_ms?: number;
+  documents?: RagDocument[];
+  rag_metadata?: RagMetadata;
+};
+
+export type RagDocument = {
+  content?: string;
+  source?: string;
+  title?: string;
+  section?: string;
+  score?: number;
+  chunk_id?: string;
+  doc_type?: string;
+  updated_at?: string;
+  retrieval_type?: string;
+};
+
+export type RagMetadata = {
+  retrieval_top_k?: number;
+  score_threshold?: number;
+  retrieved_count?: number;
+  grounding_status?: string;
+  retrieval_latency_ms?: number;
+  retrieval_type?: string;
+  fallback_used?: boolean;
+  vector_available?: boolean;
 };
 
 export type EvidenceItem = {
@@ -63,6 +88,13 @@ export type TraceToolCall = {
   error?: string;
   latency_ms?: number;
   source?: string;
+  retrieval_top_k?: number | null;
+  score_threshold?: number | null;
+  retrieved_count?: number | null;
+  grounding_status?: string;
+  retrieval_latency_ms?: number | null;
+  retrieval_type?: string;
+  fallback_used?: boolean | null;
 };
 
 export type TraceSkippedNode = {
@@ -85,6 +117,11 @@ export type TraceStep = {
   fallback_used?: boolean;
   overall_score?: number | null;
   evaluation_error?: string | null;
+  retrieval_top_k?: number | null;
+  score_threshold?: number | null;
+  retrieved_count?: number | null;
+  grounding_status?: string;
+  retrieval_latency_ms?: number | null;
 };
 
 export type TraceData = {
