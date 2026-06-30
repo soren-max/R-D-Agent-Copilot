@@ -138,3 +138,22 @@ def test_insufficient_evidence_does_not_call_llm(monkeypatch):
     assert calls["count"] == 0
     assert data["answer"] == "当前知识库证据不足，建议补充日志、配置或相关文档后再判断。"
     assert data["llm_error"] == "insufficient_evidence"
+    assert data["llm_used"] is False
+    assert data["answer_source"] == "fallback"
+    assert "llm_usage" in data, "response must include llm_usage"
+    assert data["llm_usage"]["total_tokens"] == 0
+    assert data["llm_usage"]["source"] in ("grounding_guard", "insufficient_evidence", "fallback")
+
+
+def test_llm_disabled_includes_usage(monkeypatch):
+    """LLM disabled 时 llm_usage 必须存在且 total_tokens=0。"""
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("LLM_ENABLED", "false")
+    from app.api.chat import chat_endpoint
+    response = chat_endpoint(ChatRequest(query="什么是配置中心"))
+    data = response.model_dump()
+    assert "llm_usage" in data, "llm_disabled 响应必须包含 llm_usage"
+    assert data["llm_usage"]["total_tokens"] == 0
+    assert data["llm_usage"]["source"] == "llm_disabled"
+    assert data["llm_used"] is False
+    assert data["answer_source"] == "fallback"

@@ -107,6 +107,7 @@ class AnswerSynthesizer:
                 "llm_used": False,
                 "llm_error": "insufficient_evidence",
                 "prompt_version": FALLBACK_PROMPT_VERSION,
+                "llm_usage": zero_usage(self.llm_client.settings, source="grounding_guard").model_dump(),
             }
 
         fallback_answer = self.fallback_synthesizer.synthesize(

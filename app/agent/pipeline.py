@@ -14,6 +14,18 @@ from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 
+_DEFAULT_LLM_USAGE = {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "estimated_cost": 0,
+    "currency": "USD",
+    "latency_ms": 0,
+    "source": "fallback",
+}
+
 
 def run_pipeline(request: ChatRequest) -> ChatResponse:
     """执行完整 Agent 链路并返回结果。"""
@@ -52,12 +64,13 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         trace_summary=trace_summary,
     )
     answer = synthesis["answer"]
+    llm_usage = synthesis.get("llm_usage", _DEFAULT_LLM_USAGE)
     tracer.end_synthesizer_stage(
         answer_source=synthesis["answer_source"],
         llm_used=synthesis["llm_used"],
         llm_error=synthesis["llm_error"],
         prompt_version=synthesis["prompt_version"],
-        llm_usage=synthesis["llm_usage"],
+        llm_usage=llm_usage,
     )
     tracer.set_final_answer(answer)
 
@@ -66,7 +79,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         answer_source=synthesis["answer_source"],
         llm_used=synthesis["llm_used"],
         llm_error=synthesis["llm_error"],
-        llm_usage=synthesis["llm_usage"],
+        llm_usage=llm_usage,
         route=route_result,
         plan=plan,
         tool_results=tool_results,
