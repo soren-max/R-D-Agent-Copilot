@@ -99,6 +99,10 @@ class TraceStep(BaseModel):
         default="",
         description="synthesizer 阶段使用的 prompt 版本",
     )
+    llm_usage: dict[str, Any] | None = Field(
+        default=None,
+        description="synthesizer 阶段的 LLM token/cost 用量",
+    )
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",
@@ -161,6 +165,10 @@ class ChatResponse(BaseModel):
     answer_source: str = Field(default="fallback", description="答案来源：llm | fallback")
     llm_used: bool = Field(default=False, description="是否使用 LLM 生成最终答案")
     llm_error: str | None = Field(default=None, description="LLM 不可用或失败原因")
+    llm_usage: dict[str, Any] | None = Field(
+        default=None,
+        description="LLM token 用量与成本估算",
+    )
     route: RouterResult = Field(description="Router 分类结果")
     plan: Plan = Field(description="Planner 生成计划")
     tool_results: list[ToolCallRecord] = Field(

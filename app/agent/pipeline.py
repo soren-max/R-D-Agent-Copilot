@@ -57,6 +57,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         llm_used=synthesis["llm_used"],
         llm_error=synthesis["llm_error"],
         prompt_version=synthesis["prompt_version"],
+        llm_usage=synthesis["llm_usage"],
     )
     tracer.set_final_answer(answer)
 
@@ -65,6 +66,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         answer_source=synthesis["answer_source"],
         llm_used=synthesis["llm_used"],
         llm_error=synthesis["llm_error"],
+        llm_usage=synthesis["llm_usage"],
         route=route_result,
         plan=plan,
         tool_results=tool_results,

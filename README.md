@@ -140,6 +140,12 @@ DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，
 
 前端会优先展示实时执行流；如果 SSE 失败，会提示“流式执行失败，已切换为普通请求。”并 fallback 到 `/chat`。
 
+## LLM Usage Tracking
+
+系统会在 Answer Synthesizer 阶段记录 DeepSeek 调用的 token usage、LLM latency 和 estimated cost，并返回到 `/chat` 的 `llm_usage` 字段，同时写入 Trace 的 synthesizer step。
+
+如果 API response 包含 usage，系统使用真实 token usage；如果没有 usage，则按字符数粗略估算 token。成本估算只用于本地演示，不作为真实计费依据；当前价格常量为演示占位值，未联网查询价格。LLM disabled 或 fallback 时 token 和 cost 为 0。
+
 ## Demo Queries
 
 简单问答：
