@@ -91,6 +91,7 @@ def _execute_tool_if_needed(
         "confidence": output.get("confidence", 0.0),
         "source": output.get("source", ""),
         "documents": output.get("documents", []),
+        "rag_metadata": output.get("rag_metadata", {}),
         "error": error,
         "retry_count": retry_count,
         "latency_ms": latency_ms,
@@ -169,6 +170,7 @@ def _copy_state(state: AgentGraphState) -> AgentGraphState:
 
 
 def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
+    rag_metadata = result.get("rag_metadata", {})
     return {
         "node": result.get("node", ""),
         "tool_name": result.get("tool_name", result.get("tool", "")),
@@ -177,6 +179,13 @@ def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
         "error": result.get("error", ""),
         "latency_ms": result.get("latency_ms", 0),
         "source": result.get("source", ""),
+        "retrieval_top_k": rag_metadata.get("retrieval_top_k"),
+        "score_threshold": rag_metadata.get("score_threshold"),
+        "retrieved_count": rag_metadata.get("retrieved_count"),
+        "grounding_status": rag_metadata.get("grounding_status", ""),
+        "retrieval_latency_ms": rag_metadata.get("retrieval_latency_ms"),
+        "retrieval_type": rag_metadata.get("retrieval_type", ""),
+        "fallback_used": rag_metadata.get("fallback_used"),
     }
 
 
@@ -187,17 +196,28 @@ class _RAGRetrieverTool:
         self._retriever = LocalKnowledgeRetriever()
 
     def run(self, query: str) -> dict[str, Any]:
-        retrieval = self._retriever.retrieve(query, top_k=3)
+        retrieval = self._retriever.retrieve(query, top_k=5, score_threshold=0.12, retrieval_type="hybrid")
         documents = retrieval.get("documents", [])
         source = ",".join(dict.fromkeys(doc["source"] for doc in documents))
+        rag_metadata = {
+            "retrieval_top_k": retrieval.get("retrieval_top_k", 5),
+            "score_threshold": retrieval.get("score_threshold", 0.12),
+            "retrieved_count": retrieval.get("retrieved_count", len(documents)),
+            "grounding_status": retrieval.get("grounding_status", "insufficient_evidence"),
+            "retrieval_latency_ms": retrieval.get("retrieval_latency_ms", 0),
+            "retrieval_type": retrieval.get("retrieval_type", "hybrid"),
+            "fallback_used": retrieval.get("fallback_used", False),
+            "vector_available": retrieval.get("vector_available", False),
+        }
 
         if error := retrieval.get("error"):
             return {
                 "tool_name": self.name,
-                "result": "知识库中未检索到直接相关内容。",
+                "result": "知识库证据不足。" if error == "insufficient_evidence" else "知识库中未检索到直接相关内容。",
                 "confidence": 0.0,
                 "source": source or "data/docs",
-                "documents": [],
+                "documents": documents,
+                "rag_metadata": rag_metadata,
                 "error": error,
             }
 
@@ -207,4 +227,5 @@ class _RAGRetrieverTool:
             "confidence": max((doc["score"] for doc in documents), default=0.0),
             "source": source,
             "documents": documents,
+            "rag_metadata": rag_metadata,
         }

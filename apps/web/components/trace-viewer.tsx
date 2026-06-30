@@ -75,6 +75,11 @@ function TimelineStep({ step, index }: { step: TraceStep; index: number }) {
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
             <span className="badge-slate">工具调用 {step.tool_calls?.length ?? 0}</span>
             <span className="badge-slate">跳过节点 {step.skipped_nodes?.length ?? 0}</span>
+            {step.grounding_status && (
+              <span className={step.grounding_status === "insufficient_evidence" ? "badge-amber" : "badge-green"}>
+                Grounding {step.grounding_status === "insufficient_evidence" ? "证据不足" : "已命中"}
+              </span>
+            )}
             <span className={step.fallback_used ? "badge-amber" : "badge-green"}>
               Fallback {step.fallback_used ? "已触发" : "未触发"}
             </span>
@@ -123,6 +128,11 @@ function ToolCallBadge({ call }: { call: TraceToolCall }) {
       <span className="text-slate-400">节点: {call.node || "-"}</span>
       <span className="text-slate-400">重试: {call.retry_count ?? 0}</span>
       <span className="text-slate-400">{call.latency_ms ? `${call.latency_ms}ms` : ""}</span>
+      {call.grounding_status && (
+        <span className={call.grounding_status === "insufficient_evidence" ? "text-amber-600" : "text-emerald-600"}>
+          {call.grounding_status === "insufficient_evidence" ? "知识库证据不足" : "RAG grounded"}
+        </span>
+      )}
       {call.error && <span className="text-red-500">错误: {call.error}</span>}
     </div>
   );
@@ -148,6 +158,9 @@ function ExecutorSummaryPanel({ step }: { step?: TraceStep }) {
         <MetricCard label="引擎" value={engineLabel(step.engine)} />
         <MetricCard label="执行图" value={step.graph_name || "未记录"} />
         <MetricCard label="Fallback" value={step.fallback_used ? "已触发" : "未触发"} />
+        <MetricCard label="Grounding" value={step.grounding_status === "insufficient_evidence" ? "知识库证据不足" : step.grounding_status || "未记录"} />
+        <MetricCard label="RAG 命中" value={step.retrieved_count ?? "未记录"} />
+        <MetricCard label="RAG 耗时" value={step.retrieval_latency_ms != null ? `${step.retrieval_latency_ms}ms` : "未记录"} />
       </div>
       {toolCalls.length > 0 && (
         <div className="mt-3">

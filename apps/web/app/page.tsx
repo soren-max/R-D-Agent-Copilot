@@ -14,6 +14,7 @@ import { TraceViewer } from "@/components/trace-viewer";
 import { EvaluationPanel } from "@/components/evaluation-panel";
 import { StreamingTimeline } from "@/components/streaming-timeline";
 import { EvidencePanel } from "@/components/evidence-panel";
+import { RagPanel } from "@/components/rag-panel";
 import { LLMUsageCard } from "@/components/llm-usage-card";
 import { type AgentStreamEvent, type ChatResponse, chatStreamUrl, postChat } from "@/lib/api";
 
@@ -173,6 +174,7 @@ export default function Home() {
                 />
 
                 <PlanViewer steps={result.plan?.steps} routeType={routeType} />
+                <RagPanel result={result} />
                 <ToolEvidenceGrid toolResults={result.tool_results} />
                 <EvidencePanel evidenceChain={result.evidence_chain} />
                 <TraceViewer trace={result.trace} routeType={routeType} />

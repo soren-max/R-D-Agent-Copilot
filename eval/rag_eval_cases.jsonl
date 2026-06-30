@@ -1,0 +1,5 @@
+{"query":"什么是配置中心？","expected_sources":["data/docs/config-center.md"],"expected_keywords":["配置中心","配置项","prod"]}
+{"query":"接口 500 怎么排查","expected_sources":["data/docs/troubleshooting-guide.md","data/docs/order-service-faq.md","data/docs/service-logs.md"],"expected_keywords":["500","trace_id","日志"]}
+{"query":"payment.timeout 配置影响什么","expected_sources":["data/docs/order-service-faq.md","data/docs/config-center.md"],"expected_keywords":["payment.timeout","timeout","下游"]}
+{"query":"trace_id 日志如何排查","expected_sources":["data/docs/service-logs.md","data/docs/troubleshooting-guide.md"],"expected_keywords":["trace_id","日志","链路"]}
+{"query":"enable_new_payment_flow 风险","expected_sources":["data/docs/order-service-faq.md"],"expected_keywords":["enable_new_payment_flow","新支付流程","回滚"]}

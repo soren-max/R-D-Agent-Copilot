@@ -14,6 +14,18 @@ from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 
+_DEFAULT_LLM_USAGE = {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0,
+    "estimated_cost": 0,
+    "currency": "USD",
+    "latency_ms": 0,
+    "source": "fallback",
+}
+
 
 def run_pipeline(request: ChatRequest) -> ChatResponse:
     """执行完整 Agent 链路并返回结果。"""
@@ -51,22 +63,23 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         tool_results,
         trace_summary=trace_summary,
     )
-    answer = synthesis["answer"]
+    answer = synthesis.get("answer", "")
+    llm_usage = synthesis.get("llm_usage", _DEFAULT_LLM_USAGE)
     tracer.end_synthesizer_stage(
-        answer_source=synthesis["answer_source"],
-        llm_used=synthesis["llm_used"],
-        llm_error=synthesis["llm_error"],
-        prompt_version=synthesis["prompt_version"],
-        llm_usage=synthesis["llm_usage"],
+        answer_source=synthesis.get("answer_source", "fallback"),
+        llm_used=synthesis.get("llm_used", False),
+        llm_error=synthesis.get("llm_error"),
+        prompt_version=synthesis.get("prompt_version", "unknown"),
+        llm_usage=llm_usage,
     )
     tracer.set_final_answer(answer)
 
     return ChatResponse(
         answer=answer,
-        answer_source=synthesis["answer_source"],
-        llm_used=synthesis["llm_used"],
-        llm_error=synthesis["llm_error"],
-        llm_usage=synthesis["llm_usage"],
+        answer_source=synthesis.get("answer_source", "fallback"),
+        llm_used=synthesis.get("llm_used", False),
+        llm_error=synthesis.get("llm_error"),
+        llm_usage=llm_usage,
         route=route_result,
         plan=plan,
         tool_results=tool_results,

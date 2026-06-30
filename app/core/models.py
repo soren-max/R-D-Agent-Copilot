@@ -57,6 +57,7 @@ class ToolCallRecord(BaseModel):
     confidence: float = 0.0
     source: str = ""
     documents: list[dict[str, Any]] = Field(default_factory=list)
+    rag_metadata: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
     retry_count: int = 0
     latency_ms: int = 0
@@ -75,6 +76,13 @@ class TraceToolCall(BaseModel):
     error: str = ""
     latency_ms: int = 0
     source: str = ""
+    retrieval_top_k: int | None = None
+    score_threshold: float | None = None
+    retrieved_count: int | None = None
+    grounding_status: str = ""
+    retrieval_latency_ms: int | None = None
+    retrieval_type: str = ""
+    fallback_used: bool | None = None
 
 
 class TraceSkippedNode(BaseModel):
@@ -130,6 +138,26 @@ class TraceStep(BaseModel):
     evidence_count: int | None = Field(
         default=None,
         description="evidence 阶段生成的证据数量",
+    )
+    retrieval_top_k: int | None = Field(
+        default=None,
+        description="RAG 检索 top_k 参数",
+    )
+    score_threshold: float | None = Field(
+        default=None,
+        description="RAG 检索分数阈值",
+    )
+    retrieved_count: int | None = Field(
+        default=None,
+        description="RAG 返回文档数量",
+    )
+    grounding_status: str = Field(
+        default="",
+        description="RAG grounding 状态",
+    )
+    retrieval_latency_ms: int | None = Field(
+        default=None,
+        description="RAG 检索耗时",
     )
 
 

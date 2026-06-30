@@ -30,6 +30,8 @@ from app.core.prompt import (
     build_answer_user_prompt,
 )
 
+INSUFFICIENT_EVIDENCE_ANSWER = "当前知识库证据不足，建议补充日志、配置或相关文档后再判断。"
+
 
 def _to_dict(value: Any) -> dict[str, Any]:
     if hasattr(value, "model_dump"):
@@ -51,6 +53,17 @@ def _tool_results_to_records(
         result if isinstance(result, ToolCallRecord) else ToolCallRecord(**result)
         for result in tool_results
     ]
+
+
+def _rag_grounding_status(tool_results: list[ToolCallRecord]) -> str:
+    rag_result = next((result for result in tool_results if result.tool == "rag_retriever"), None)
+    if rag_result is None:
+        return "not_applicable"
+    if rag_result.rag_metadata.get("grounding_status"):
+        return str(rag_result.rag_metadata["grounding_status"])
+    if rag_result.error or not rag_result.documents:
+        return "insufficient_evidence"
+    return "grounded"
 
 
 def _llm_error_code(error: Exception) -> str:
@@ -86,6 +99,17 @@ class AnswerSynthesizer:
         route_result = route if isinstance(route, RouterResult) else RouterResult(**route)
         plan_result = plan if isinstance(plan, Plan) else Plan(**plan)
         result_records = _tool_results_to_records(tool_results)
+        grounding_status = _rag_grounding_status(result_records)
+        if grounding_status == "insufficient_evidence":
+            return {
+                "answer": INSUFFICIENT_EVIDENCE_ANSWER,
+                "answer_source": "fallback",
+                "llm_used": False,
+                "llm_error": "insufficient_evidence",
+                "prompt_version": FALLBACK_PROMPT_VERSION,
+                "llm_usage": zero_usage(self.llm_client.settings, source="grounding_guard").model_dump(),
+            }
+
         fallback_answer = self.fallback_synthesizer.synthesize(
             query,
             route_result,
@@ -172,6 +196,8 @@ class Synthesizer:
         self, query: str, tool_results: list[ToolCallRecord] | list[dict[str, Any]]
     ) -> str:
         rag_result = next((r for r in tool_results if r.tool == "rag_retriever"), None)
+        if rag_result and rag_result.rag_metadata.get("grounding_status") == "insufficient_evidence":
+            return INSUFFICIENT_EVIDENCE_ANSWER
         if rag_result and rag_result.documents:
             top_doc = rag_result.documents[0]
             sources = "、".join(dict.fromkeys(doc["source"] for doc in rag_result.documents))
@@ -183,11 +209,7 @@ class Synthesizer:
             )
 
         if rag_result and rag_result.error:
-            return (
-                f"简要解释：知识库中未检索到直接相关内容，暂时无法基于本地文档解释「{query}」。\n\n"
-                f"相关知识来源：{rag_result.source or 'data/docs'}\n\n"
-                "补充说明：当前回答不会编造知识库之外的具体事实。"
-            )
+            return INSUFFICIENT_EVIDENCE_ANSWER
 
         evidence = "；".join(r.result for r in tool_results if r.result) or "未获取到执行器结果。"
         return (
@@ -225,7 +247,7 @@ class Synthesizer:
                 rag_result = "；".join(doc["content"][:120] for doc in record.documents[:2])
                 rag_sources = "、".join(dict.fromkeys(doc["source"] for doc in record.documents))
             elif record.tool == "rag_retriever" and record.error:
-                rag_result = "知识库中未检索到直接相关内容。"
+                rag_result = "知识库证据不足。"
 
         # 合成三段式回答
         paragraphs: list[str] = []

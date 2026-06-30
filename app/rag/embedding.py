@@ -1,17 +1,10 @@
-"""
-Embedding 占位模块。
-
-Day3 当前只实现 deterministic keyword-based retrieval，不加载真实模型、
-不联网下载 embedding，也不连接外部向量数据库。后续如需接入真实 embedding，
-应在保持可测试 fallback 的前提下扩展这里。
-"""
+"""Deterministic local embeddings for RAG vector retrieval."""
 
 from __future__ import annotations
 
+from app.rag.vector_store import embed_text as _embed_text
+
 
 def embed_text(text: str) -> list[float]:
-    """返回确定性的占位向量，避免当前阶段引入真实 embedding 依赖。"""
-    if not text:
-        return [0.0]
-    return [float(len(text))]
-
+    """Return a stable token-hashing embedding without external model calls."""
+    return _embed_text(text)
