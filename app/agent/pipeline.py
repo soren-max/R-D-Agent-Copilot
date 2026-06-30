@@ -63,22 +63,22 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         tool_results,
         trace_summary=trace_summary,
     )
-    answer = synthesis["answer"]
+    answer = synthesis.get("answer", "")
     llm_usage = synthesis.get("llm_usage", _DEFAULT_LLM_USAGE)
     tracer.end_synthesizer_stage(
-        answer_source=synthesis["answer_source"],
-        llm_used=synthesis["llm_used"],
-        llm_error=synthesis["llm_error"],
-        prompt_version=synthesis["prompt_version"],
+        answer_source=synthesis.get("answer_source", "fallback"),
+        llm_used=synthesis.get("llm_used", False),
+        llm_error=synthesis.get("llm_error"),
+        prompt_version=synthesis.get("prompt_version", "unknown"),
         llm_usage=llm_usage,
     )
     tracer.set_final_answer(answer)
 
     return ChatResponse(
         answer=answer,
-        answer_source=synthesis["answer_source"],
-        llm_used=synthesis["llm_used"],
-        llm_error=synthesis["llm_error"],
+        answer_source=synthesis.get("answer_source", "fallback"),
+        llm_used=synthesis.get("llm_used", False),
+        llm_error=synthesis.get("llm_error"),
         llm_usage=llm_usage,
         route=route_result,
         plan=plan,
