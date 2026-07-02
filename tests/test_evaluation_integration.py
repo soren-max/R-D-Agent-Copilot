@@ -38,7 +38,7 @@ def test_trace_steps_include_evaluation_stage():
 
     stages = [step["stage"] for step in data["trace"]["steps"]]
 
-    assert stages == ["router", "planner", "executor", "synthesizer", "evaluation", "evidence"]
+    assert stages == ["router", "planner", "executor", "synthesizer", "grounding_checker", "evaluation", "evidence"]
     evaluation_step = [step for step in data["trace"]["steps"] if step["stage"] == "evaluation"][0]
     assert evaluation_step["engine"] == "rule_based"
     assert 0 <= evaluation_step["overall_score"] <= 1

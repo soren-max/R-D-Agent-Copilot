@@ -126,6 +126,7 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

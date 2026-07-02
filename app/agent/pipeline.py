@@ -13,6 +13,7 @@ from app.agent.router import IntentRouter
 from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
+from apps.api.app.rag.grounding_checker import GroundingChecker
 
 _DEFAULT_LLM_USAGE = {
     "provider": "deepseek",
@@ -97,6 +98,19 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         error_message=synthesis.get("error_message", ""),
         llm_usage=llm_usage,
     )
+
+    rag_evidence = next(
+        (
+            result.rag_metadata.get("evidence", [])
+            for result in tool_results
+            if result.tool == "rag_retriever" or result.tool_name == "rag_retriever"
+        ),
+        [],
+    )
+    grounding_evidence = [*rag_evidence, *_tool_results_to_grounding_evidence(tool_results)]
+    tracer.start_stage("grounding_checker")
+    grounding_check = GroundingChecker().check(answer, grounding_evidence).model_dump()
+    tracer.end_grounding_checker_stage(grounding_check)
     tracer.set_final_answer(answer)
 
     return ChatResponse(
@@ -109,4 +123,23 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         plan=plan,
         tool_results=tool_results,
         trace=tracer.snapshot(),
+        grounded_claims=grounding_check.get("grounded_claims", []),
+        unsupported_claims=grounding_check.get("unsupported_claims", []),
+        grounding_check=grounding_check,
     )
+
+
+def _tool_results_to_grounding_evidence(tool_results) -> list[dict[str, object]]:
+    evidence: list[dict[str, object]] = []
+    for result in tool_results:
+        if result.tool in {"rag_retriever", "none"}:
+            continue
+        if result.status != "success" or not result.result:
+            continue
+        evidence.append({
+            "source": result.source,
+            "chunk_id": f"{result.tool}:{result.step_id}",
+            "content_excerpt": result.result[:500],
+            "score": result.confidence,
+        })
+    return evidence

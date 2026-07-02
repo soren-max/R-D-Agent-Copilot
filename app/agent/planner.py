@@ -98,6 +98,32 @@ class Planner:
                          input=query,
                          expected_output="配置差异和风险配置项"),
             ]
+        elif intent == "deployment_issue":
+            primary_steps = [
+                PlanStep(id=1, action="query_logs", tool="log_tool",
+                         description=f"查询部署或启动相关日志，排查「{query}」中的失败原因",
+                         step_name="query_logs",
+                         input=query,
+                         expected_output="部署失败、启动失败或端口冲突日志"),
+                PlanStep(id=2, action="check_config", tool="config_tool",
+                         description="检查端口、健康检查和运行时配置",
+                         step_name="check_config",
+                         input=query,
+                         expected_output="部署配置和健康检查配置差异"),
+                PlanStep(id=3, action="analyze_git_diff", tool="git_tool",
+                         description="分析最近发布涉及的代码变更",
+                         step_name="analyze_git_diff",
+                         input=query,
+                         expected_output="近期发布变更摘要"),
+            ]
+        elif intent == "safety_risk":
+            primary_steps = [
+                PlanStep(id=1, action="retrieve_knowledge", tool="rag_retriever",
+                         description="检索安全边界和风险处置知识，避免执行危险操作",
+                         step_name="retrieve_knowledge",
+                         input=query,
+                         expected_output="安全风险说明和受控排查建议"),
+            ]
         elif intent == "git_change":
             primary_steps = [
                 PlanStep(id=1, action="analyze_git_diff", tool="git_tool",
@@ -125,6 +151,12 @@ class Planner:
                          expected_output="相关 Git 提交和变更摘要"),
             ]
         rag_id = len(primary_steps) + 1
+        if any(step.tool == "rag_retriever" for step in primary_steps):
+            return Plan(
+                plan_type="troubleshooting_plan",
+                task_type=intent or "log_analysis",
+                steps=primary_steps,
+            )
         return Plan(
             plan_type="troubleshooting_plan",
             task_type=intent or "log_analysis",

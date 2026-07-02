@@ -3,14 +3,19 @@ from app.api.chat import chat_endpoint
 from app.core.models import Plan, RouterResult
 from app.core.models import ChatRequest
 from apps.api.app.rag import (
+    GroundingChecker,
     KeywordRetriever,
+    LocalReranker,
+    VectorSearchIndex,
     build_evidence,
     chunk_documents,
     load_markdown_documents,
     rewrite_query,
 )
-from apps.api.app.rag.evaluation import RagEvalCase, evaluate_cases
+from apps.api.app.rag.claim_extractor import ClaimExtractor
+from apps.api.app.rag.evaluation import RagEvalCase, evaluate_cases, load_eval_cases
 from apps.api.app.rag.keyword_search import KeywordSearchIndex
+from pathlib import Path
 
 
 def test_v030_loader_loads_markdown_kb_documents():
@@ -123,7 +128,7 @@ def test_v031_rag_evaluation_reports_recall_and_mrr():
         ),
     ])
 
-    assert metrics["Recall@K"] == 1.0
+    assert metrics["Recall@5"] == 1.0
     assert metrics["MRR"] == 1.0
     assert metrics["failed_cases"] == []
 
@@ -136,3 +141,82 @@ def test_v031_trace_records_query_rewrite_fields(monkeypatch):
 
     assert "port already in use" in executor_step["query_expansions"]
     assert len(executor_step["rewritten_queries"]) >= 2
+
+
+def test_v032_vector_search_returns_semantic_hits():
+    chunks = chunk_documents(load_markdown_documents())
+    hits = VectorSearchIndex(chunks).search("upstream proxy timeout", top_k=3)
+
+    assert hits
+    assert any("nginx_error_guide.md" in hit.chunk.source for hit in hits)
+    assert all(hit.retrieval_type == "vector" for hit in hits)
+
+
+def test_v032_hybrid_search_merges_keyword_and_vector_hits():
+    result = KeywordRetriever().retrieve_with_evidence("nginx 502 upstream", top_k=5, retrieval_type="hybrid")
+
+    assert result["retrieval_type"] == "hybrid"
+    assert result["retrieved_chunks"]
+    assert result["keyword_hit_count"] >= 1
+    assert result["vector_hit_count"] >= 1
+    assert {chunk["chunk_id"] for chunk in result["retrieved_chunks"]}
+
+
+def test_v032_rag_eval_loads_20_cases_and_reports_grounding_metrics():
+    cases = load_eval_cases(Path("eval/rag_v030_eval_cases.jsonl"))
+    metrics = evaluate_cases(cases, top_k=5, retrieval_type="hybrid", baseline_retrieval_type="keyword")
+
+    assert len(cases) == 20
+    assert 0 <= metrics["Recall@5"] <= 1
+    assert 0 <= metrics["Grounding Score"] <= 1
+    assert metrics["No Evidence Rejection Accuracy"] == 1.0
+    assert "baseline" in metrics
+    assert "improvement" in metrics
+
+
+def test_v040_reranker_outputs_sorted_rerank_results():
+    retriever = KeywordRetriever()
+    hits = retriever.search("服务启动失败 port already in use", top_k=5, retrieval_type="hybrid")
+    reranked_hits, rerank_results = LocalReranker().rerank("服务启动失败 port already in use", hits, top_k=3)
+
+    assert len(reranked_hits) <= 3
+    assert rerank_results
+    assert rerank_results[0].final_score >= rerank_results[-1].final_score
+    assert rerank_results[0].chunk_id
+
+
+def test_v040_claim_extractor_extracts_checkable_claims():
+    answer = "【初步判断】服务启动失败可能与 port already in use 有关。\n【风险提示】以上结论只基于证据。"
+    claims = ClaimExtractor().extract(answer)
+
+    assert claims
+    assert claims[0].text == "服务启动失败可能与 port already in use 有关"
+
+
+def test_v040_grounding_checker_reports_unsupported_claims():
+    answer = "【初步判断】服务启动失败可能与 port already in use 有关。数据库主库已经损坏。"
+    evidence = [{
+        "source": "apps/api/app/kb/deployment_guide.md",
+        "chunk_id": "deployment_guide.md#chunk-1",
+        "content_excerpt": "service fails to start with port already in use",
+        "score": 0.9,
+    }]
+
+    result = GroundingChecker().check(answer, evidence)
+
+    assert result.grounded_claims
+    assert result.unsupported_claims
+    assert result.unsupported_claims[0].text == "数据库主库已经损坏"
+
+
+def test_v040_chat_response_includes_grounding_check(monkeypatch):
+    monkeypatch.setenv("LLM_ENABLED", "false")
+
+    data = chat_endpoint(ChatRequest(query="服务启动失败，端口被占用")).model_dump()
+    grounding_step = [step for step in data["trace"]["steps"] if step["stage"] == "grounding_checker"][0]
+
+    assert data["grounding_check"] is not None
+    assert "unsupported_claims" in data
+    assert "grounded_claims" in data
+    assert 0 <= data["grounding_check"]["grounding_score"] <= 1
+    assert grounding_step["claim_grounding_score"] == data["grounding_check"]["grounding_score"]

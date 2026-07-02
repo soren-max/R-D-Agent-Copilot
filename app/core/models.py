@@ -226,10 +226,43 @@ class TraceStep(BaseModel):
         default_factory=list,
         description="v0.3.0 grounding evidence",
     )
+    rerank_results: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.4.0 reranker 输出",
+    )
     no_evidence_reason: str = Field(
         default="",
         description="v0.3.0 无证据原因",
     )
+    keyword_hit_count: int | None = Field(
+        default=None,
+        description="v0.3.2 keyword 命中数量",
+    )
+    vector_hit_count: int | None = Field(
+        default=None,
+        description="v0.3.2 vector 命中数量",
+    )
+    grounded_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.4.0 有 evidence 支撑的 claims",
+    )
+    unsupported_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.4.0 未被 evidence 支撑的 claims",
+    )
+    claim_grounding_score: float | None = Field(
+        default=None,
+        description="v0.4.0 claim-level grounding score",
+    )
+    expected_intent: str = Field(default="", description="v0.5.0 planning eval expected intent")
+    actual_intent: str = Field(default="", description="v0.5.0 planning eval actual intent")
+    router_correct: bool | None = Field(default=None, description="v0.5.0 router intent correctness")
+    expected_tools: list[str] = Field(default_factory=list, description="v0.5.0 expected planning tools")
+    actual_tools: list[str] = Field(default_factory=list, description="v0.5.0 actual planning tools")
+    missing_tools: list[str] = Field(default_factory=list, description="v0.5.0 missing required tools")
+    extra_tools: list[str] = Field(default_factory=list, description="v0.5.0 unexpected tools")
+    plan_quality_score: float | None = Field(default=None, description="v0.5.0 planning quality score")
+    failure_reasons: list[str] = Field(default_factory=list, description="v0.5.0 planning eval failure reasons")
 
 
 class TraceData(BaseModel):
@@ -281,4 +314,16 @@ class ChatResponse(BaseModel):
     evidence_chain: EvidenceChain | None = Field(
         default=None,
         description="证据链与置信度结果",
+    )
+    grounded_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.4.0 有 evidence 支撑的 claims",
+    )
+    unsupported_claims: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.4.0 未被 evidence 支撑的 claims",
+    )
+    grounding_check: dict[str, Any] | None = Field(
+        default=None,
+        description="v0.4.0 claim-level grounding check result",
     )

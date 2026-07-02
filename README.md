@@ -210,19 +210,157 @@ keywords
 
 关键词检索支持 `top_k`，同时覆盖英文错误短语和中文排障关键词。无匹配时返回空列表，并将 grounding 标记为 `insufficient_evidence`。
 
-v0.3.1 增加低成本高收益的 Query Rewrite 和 RAG Evaluation：
+v0.3.1/v0.3.2 增加低成本高收益的 Query Rewrite、Hybrid Search 和 RAG Evaluation：
 
 - Query Rewrite：把中文排障表达扩展成可检索的英文错误短语，例如“端口被占用”扩展为 `port already in use`、`failed to start`、`listen port`。
-- Multi-query keyword retrieval：原始 query 和 rewrite query 同时检索，按 chunk 去重后排序。
-- Evaluation：提供 Recall@K、Keyword Hit Rate、MRR 和 failed_cases，便于持续改知识库和 rewrite 规则。
+- Hybrid Search：keyword hits 保精准，local token-vector hits 保召回，merge 后按 `chunk_id` 去重并返回 top_k。
+- Evaluation：提供 Recall@5、Keyword Hit Rate、Grounding Score、No Evidence Rejection Accuracy、MRR 和 failed_cases，便于持续改知识库和 rewrite 规则。
+
+v0.4.0 增加 Rerank + Grounding Check，目标不是让答案更长，而是让答案更可信：
+
+```text
+retrieved_chunks
+-> evidence builder
+-> reranker
+-> answer synthesizer
+-> grounding checker
+-> final report + unsupported_claims + trace
+```
+
+新增模块：
+
+```text
+apps/api/app/rag/
+  schemas.py
+  reranker.py
+  claim_extractor.py
+  grounding_checker.py
+```
+
+关键输出：
+
+- `rerank_results`：记录 chunk 原始分、rerank 分和 final score。
+- `grounded_claims`：最终报告中能被 evidence 支撑的 claim。
+- `unsupported_claims`：最终报告中未找到 evidence 支撑的 claim。
+- `grounding_check.grounding_score`：claim-level grounded ratio。
+- Trace 新增 `grounding_checker` stage，便于回看答案可信度。
+
+## Planning Evaluation
+
+v0.5.0 增加 Agent Planning Evaluation，用于评估 Router / Planner 是否选对意图、工具和步骤，让复杂 Agent 的规划质量可量化、可回放。
+
+核心文件：
+
+```text
+evaluation/
+  plan_quality.py
+  planning_eval.py
+  bad_case_replay.py
+
+data/eval/
+  planning_cases.jsonl
+  planning_eval_report.md
+  bad_cases.jsonl
+  bad_case_replay_report.md
+```
+
+运行规划评估：
+
+```bash
+python -m evaluation.planning_eval
+```
+
+运行 bad case replay：
+
+```bash
+python -m evaluation.bad_case_replay
+```
+
+`data/eval/planning_cases.jsonl` 当前包含 30 条研发排障规划用例，覆盖：
+
+- `knowledge_qa`
+- `log_analysis`
+- `config_diff`
+- `git_change`
+- `deployment_issue`
+- `safety_risk`
+
+每条 case 包含：
+
+```text
+case_id
+question
+expected_intent
+expected_tools
+must_have_steps
+safety_required
+```
+
+Plan Quality Score 由 5 个 rule-based 子分数组成：
+
+```text
+plan_quality_score =
+  intent_score * 0.25
+  + required_tools_score * 0.25
+  + step_order_score * 0.20
+  + completeness_score * 0.20
+  + safety_score * 0.10
+```
+
+输出字段包括：
+
+- `missing_tools`
+- `extra_tools`
+- `wrong_order_steps`
+- `failure_reasons`
+- `plan_quality_score`
+
+Bad Case Replay 会把失败 case 保存到 `data/eval/bad_cases.jsonl`，重新运行后输出 `fixed` / `still_failed` 到 `bad_case_replay_report.md`。
+
+当前 v0.5.0 本地规划评估结果：
+
+```text
+total_cases: 30
+router_intent_accuracy: 1.0
+required_tools_hit_rate: 1.0
+step_order_accuracy: 1.0
+safety_tool_recall: 1.0
+average_plan_quality_score: 1.0
+failed_cases: 0
+```
+
+### v0.5.0 Changelog
+
+- Added rule-based Planning Evaluation for Router and Planner.
+- Added Plan Quality Score with intent, tools, order, completeness, and safety dimensions.
+- Added 30 local planning eval cases for R&D troubleshooting scenarios.
+- Added Bad Case Replay with `fixed` / `still_failed` status.
+- Added planning eval fields to Trace schema for report and replay diagnostics.
+
+运行 v0.3 RAG 评估：
+
+```bash
+python scripts/eval_v030_rag.py
+```
+
+当前 20 条本地评估用例结果：
+
+```text
+Recall@5: 0.6667 -> 1.0
+Grounding Score: 0.7 -> 1.0
+No Evidence Rejection Accuracy: 1.0
+MRR: 0.9722
+```
+
+其中 baseline 为关闭 Query Rewrite 的 keyword 检索；当前结果为 Query Rewrite + Hybrid Search。
 
 当前建议的 RAG 演进顺序：
 
 1. Query Rewrite：成本低，能明显改善中文口语化问题的召回。
 2. RAG Evaluation：让召回质量可量化，避免只凭主观 demo 判断。
-3. Hybrid Search：在关键词基础上叠加向量召回，覆盖语义相近但关键词不一致的问题。
-4. Rerank：对 top-N 候选做更精细排序，优先解决“召回有了但排不准”。
-5. Grounding Check：在生成前后检查答案句子是否能被 evidence 支撑。
+3. Hybrid Search：已完成本地 keyword + token-vector merge，覆盖语义相近但关键词不一致的问题。
+4. Rerank：已完成轻量本地 reranker，对 top-N 候选做更精细排序。
+5. Grounding Check：已完成 claim-level checker，检查答案句子是否能被 evidence 支撑。
 
 ## Knowledge Base
 
@@ -253,7 +391,10 @@ v0.3.0 的 grounding 规则：
 - Retriever 返回相关 chunks。
 - Query Rewrite 先扩展中英文排障关键词，再执行关键词检索。
 - Evidence Builder 将 chunks 转成 `source`、`chunk_id`、`content_excerpt`、`score`。
-- Trace 在 executor stage 记录 `query`、`rewritten_queries`、`query_expansions`、`retrieved_chunks`、`evidence`、`grounding_status`、`no_evidence_reason`。
+- Reranker 对候选 chunks 重新排序，并记录 `rerank_results`。
+- Grounding Checker 从最终报告抽取 claims，检查每条 claim 是否有 evidence overlap。
+- Trace 在 executor stage 记录 `query`、`rewritten_queries`、`query_expansions`、`retrieved_chunks`、`rerank_results`、`evidence`、`grounding_status`、`no_evidence_reason`。
+- Trace 在 grounding_checker stage 记录 `grounded_claims`、`unsupported_claims` 和 `claim_grounding_score`。
 - Answer Synthesizer 只能基于 Tools 和 RAG evidence 输出中文排障报告。
 - evidence 为空时，必须输出“当前证据不足”。
 - 不允许编造日志、配置、Git 变更或命令执行结果。

@@ -54,6 +54,7 @@ def test_agent_steps_include_pipeline_stages():
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

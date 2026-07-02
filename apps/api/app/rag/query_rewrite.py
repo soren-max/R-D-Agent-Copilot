@@ -24,11 +24,13 @@ class QueryRewriteResult:
 _EXPANSION_RULES: list[tuple[tuple[str, ...], tuple[str, ...]]] = [
     (("端口被占用", "端口占用", "端口冲突", "端口已被使用"), ("port already in use", "failed to start", "listen port")),
     (("启动失败", "起不来", "无法启动"), ("failed to start", "health check", "deployment")),
+    (("健康检查", "探活失败"), ("health check", "readiness timeout", "deployment")),
     (("redis", "缓存"), ("redis timeout", "connection pool", "slowlog")),
     (("连接池", "连接超时"), ("connection pool", "connection timeout", "timeout")),
     (("nginx", "网关"), ("nginx", "upstream", "502 bad gateway")),
     (("502", "bad gateway"), ("502 bad gateway", "upstream service unavailable", "proxy timeout")),
     (("慢查询", "sql 慢", "数据库慢"), ("slow query", "execution plan", "missing index")),
+    (("锁等待", "事务锁", "接口变慢"), ("lock wait", "transaction duration", "slow query")),
     (("ci", "构建失败", "流水线失败"), ("ci build failed", "job log", "dependency resolution")),
     (("回滚", "撤销提交"), ("git rollback", "revert", "risky commit")),
 ]

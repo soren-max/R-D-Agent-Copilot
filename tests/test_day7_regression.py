@@ -43,6 +43,7 @@ def test_day7_simple_qa_end_to_end_with_skipped_nodes(monkeypatch):
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

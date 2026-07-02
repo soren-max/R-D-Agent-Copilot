@@ -28,4 +28,6 @@ prompt_version: planner_prompt_v020
 - log_analysis：优先使用 log_tool，并用 rag_retriever 补充知识。
 - config_diff：优先使用 config_tool，并用 rag_retriever 补充知识。
 - git_change：优先使用 git_tool，并用 rag_retriever 补充知识。
+- deployment_issue：优先使用 log_tool、config_tool、git_tool，并用 rag_retriever 补充部署知识。
+- safety_risk：只使用 rag_retriever 给出安全边界和受控排查建议，不执行危险工具动作。
 - 多信号复杂排障可以组合 log_tool、config_tool、git_tool、rag_retriever。
