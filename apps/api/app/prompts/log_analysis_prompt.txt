@@ -1,0 +1,5 @@
+prompt_name: log_analysis_prompt
+prompt_version: log_analysis_prompt_v020
+
+分析日志证据时，只能引用 log_tool 返回的日志摘要、错误信息、时间线和来源。
+不要补充工具结果中不存在的日志行或错误码。

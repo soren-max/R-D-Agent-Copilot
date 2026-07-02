@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.evidence.schemas import EvidenceChain
 from app.eval.schemas import EvaluationResult
@@ -20,8 +20,24 @@ class RouterResult(BaseModel):
     """意图分类结果。"""
 
     type: str = Field(description="意图类型：simple_qa | complex_troubleshooting")
+    intent: str = Field(default="", description="v0.2.0 意图：knowledge_qa | log_analysis | config_diff | git_change | unknown")
     confidence: float = Field(ge=0.0, le=1.0, description="置信度 0.0 ~ 1.0")
     reason: str = Field(description="分类原因说明")
+    prompt_name: str = ""
+    prompt_version: str = ""
+    model: str = ""
+    raw_llm_output: str = ""
+    parsed_output: dict[str, Any] | None = None
+    error_message: str = ""
+    fallback_used: bool = False
+
+    @model_validator(mode="after")
+    def sync_type_and_intent(self) -> "RouterResult":
+        if not self.intent:
+            self.intent = "knowledge_qa" if self.type == "simple_qa" else "log_analysis"
+        if not self.type:
+            self.type = "simple_qa" if self.intent == "knowledge_qa" else "complex_troubleshooting"
+        return self
 
 
 # ── Planner ─────────────────────────────────────────────────────────
@@ -33,13 +49,42 @@ class PlanStep(BaseModel):
     action: str = Field(description="动作标识，如 query_logs / check_config")
     tool: str = Field(description="执行此步骤所需的工具名")
     description: str = Field(description="步骤描述，供用户阅读")
+    step_name: str = Field(default="", description="v0.2.0 结构化步骤名称")
+    input: str = Field(default="", description="v0.2.0 步骤输入")
+    expected_output: str = Field(default="", description="v0.2.0 期望输出")
+
+    @model_validator(mode="after")
+    def sync_step_fields(self) -> "PlanStep":
+        if not self.step_name:
+            self.step_name = self.action
+        if not self.description:
+            self.description = self.expected_output or self.step_name
+        if not self.action:
+            self.action = self.step_name
+        return self
 
 
 class Plan(BaseModel):
     """完整执行计划。"""
 
     plan_type: str = Field(description="计划类型：simple_qa | troubleshooting_plan")
+    task_type: str = Field(default="", description="v0.2.0 任务类型")
     steps: list[PlanStep] = Field(default_factory=list, description="执行步骤列表")
+    prompt_name: str = ""
+    prompt_version: str = ""
+    model: str = ""
+    raw_llm_output: str = ""
+    parsed_output: dict[str, Any] | None = None
+    error_message: str = ""
+    fallback_used: bool = False
+
+    @model_validator(mode="after")
+    def sync_plan_fields(self) -> "Plan":
+        if not self.task_type:
+            self.task_type = self.plan_type
+        if not self.plan_type:
+            self.plan_type = "simple_qa" if self.task_type == "knowledge_qa" else "troubleshooting_plan"
+        return self
 
 
 # ── Executor ────────────────────────────────────────────────────────
@@ -107,6 +152,11 @@ class TraceStep(BaseModel):
         default="",
         description="synthesizer 阶段使用的 prompt 版本",
     )
+    prompt_name: str = Field(default="", description="v0.2.0 prompt 名称")
+    model: str = Field(default="", description="v0.2.0 LLM 模型")
+    raw_llm_output: str = Field(default="", description="v0.2.0 原始 LLM 输出")
+    parsed_output: dict[str, Any] | None = Field(default=None, description="v0.2.0 解析后的结构化输出")
+    error_message: str = Field(default="", description="v0.2.0 LLM 或解析错误")
     llm_usage: dict[str, Any] | None = Field(
         default=None,
         description="synthesizer 阶段的 LLM token/cost 用量",
@@ -158,6 +208,27 @@ class TraceStep(BaseModel):
     retrieval_latency_ms: int | None = Field(
         default=None,
         description="RAG 检索耗时",
+    )
+    query: str = Field(default="", description="v0.3.0 RAG 查询")
+    retrieved_chunks: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.3.0 检索到的知识库 chunks",
+    )
+    rewritten_queries: list[str] = Field(
+        default_factory=list,
+        description="v0.3.1 Query Rewrite 后的查询列表",
+    )
+    query_expansions: list[str] = Field(
+        default_factory=list,
+        description="v0.3.1 Query Rewrite 扩展词",
+    )
+    evidence: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="v0.3.0 grounding evidence",
+    )
+    no_evidence_reason: str = Field(
+        default="",
+        description="v0.3.0 无证据原因",
     )
 
 

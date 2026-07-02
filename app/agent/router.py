@@ -9,9 +9,12 @@
 from __future__ import annotations
 
 import re
+import json
 from typing import Final
 
 from app.core.models import RouterResult
+from app.core.prompt import load_prompt
+from app.llms.base import LLMProvider, get_llm_provider
 
 _TROUBLESHOOTING_KEYWORDS: Final[list[tuple[str, float]]] = [
     ("报错", 3.0), ("异常", 2.5), ("错误", 2.0), ("失败", 2.0),
@@ -44,22 +47,83 @@ _QA_PROCEDURAL_PATTERNS: Final[list[str]] = [
 
 _TROUBLESHOOTING_THRESHOLD: Final[float] = 2.0
 _MAX_CONFIDENCE: Final[float] = 0.95
+_LLM_CONFIDENCE_THRESHOLD: Final[float] = 0.60
+_INTENT_TO_LEGACY_TYPE: Final[dict[str, str]] = {
+    "knowledge_qa": "simple_qa",
+    "log_analysis": "complex_troubleshooting",
+    "config_diff": "complex_troubleshooting",
+    "git_change": "complex_troubleshooting",
+    "unknown": "simple_qa",
+}
 
 
 class IntentRouter:
     """用户输入 → 意图分类。"""
 
+    def __init__(self, llm_provider: LLMProvider | None = None) -> None:
+        self.llm_provider = llm_provider or get_llm_provider()
+        self.prompt_name = "router_prompt"
+        self.system_prompt, self.prompt_version = load_prompt(self.prompt_name)
+
     def route(self, message: str) -> RouterResult:
+        llm_result = self._route_with_llm(message)
+        if llm_result is not None:
+            return llm_result
+
+        return self._route_rule_based(message)
+
+    def _route_with_llm(self, message: str) -> RouterResult | None:
+        if not self.llm_provider.is_available():
+            return None
+        try:
+            response = self.llm_provider.generate(
+                self.prompt_name,
+                self.system_prompt,
+                f"用户问题：{message}",
+            )
+            parsed = _parse_router_json(response.content)
+            if parsed["confidence"] < _LLM_CONFIDENCE_THRESHOLD or parsed["intent"] == "unknown":
+                fallback = self._route_rule_based(message)
+                fallback.prompt_name = self.prompt_name
+                fallback.prompt_version = self.prompt_version
+                fallback.model = response.model
+                fallback.raw_llm_output = response.raw_output
+                fallback.parsed_output = parsed
+                fallback.error_message = "low_confidence_or_unknown"
+                fallback.fallback_used = True
+                return fallback
+            intent = parsed["intent"]
+            return RouterResult(
+                type=_INTENT_TO_LEGACY_TYPE[intent],
+                intent=intent,
+                confidence=parsed["confidence"],
+                reason=parsed["reason"],
+                prompt_name=self.prompt_name,
+                prompt_version=self.prompt_version,
+                model=response.model,
+                raw_llm_output=response.raw_output,
+                parsed_output=parsed,
+                fallback_used=False,
+            )
+        except Exception as exc:
+            fallback = self._route_rule_based(message)
+            fallback.prompt_name = self.prompt_name
+            fallback.prompt_version = self.prompt_version
+            fallback.error_message = type(exc).__name__
+            fallback.fallback_used = True
+            return fallback
+
+    def _route_rule_based(self, message: str) -> RouterResult:
         text_lower = message.lower().strip()
         if not text_lower:
-            return RouterResult(type="simple_qa", confidence=0.0, reason="输入为空，默认分类为简单问答。")
+            return RouterResult(type="simple_qa", intent="knowledge_qa", confidence=0.0, reason="输入为空，默认分类为简单问答。")
 
         # Layer 1: QA 定义模式
         for pattern in _QA_DEFINITION_PATTERNS:
             m = re.search(pattern, text_lower)
             if m:
                 return RouterResult(
-                    type="simple_qa", confidence=0.75,
+                    type="simple_qa", intent="knowledge_qa", confidence=0.75,
                     reason=f"检测到定义类问句模式「{m.group().strip()}」，判定为简单问答。",
                 )
 
@@ -68,7 +132,7 @@ class IntentRouter:
             m = re.search(pattern, text_lower)
             if m:
                 return RouterResult(
-                    type="simple_qa", confidence=0.70,
+                    type="simple_qa", intent="knowledge_qa", confidence=0.70,
                     reason=f"检测到程序类问句模式「{m.group().strip()}」，判定为简单问答。",
                 )
 
@@ -88,9 +152,40 @@ class IntentRouter:
             if len(matched_trouble) > 8:
                 matched_str += f" 等 {len(matched_trouble)} 个关键词"
             return RouterResult(
-                type="complex_troubleshooting", confidence=confidence,
+                type="complex_troubleshooting", intent=_infer_troubleshooting_intent(text_lower), confidence=confidence,
                 reason=f"检测到排障关键词 [{matched_str}]，判定为复杂排障问题。",
             )
 
         # Fallback: simple_qa
-        return RouterResult(type="simple_qa", confidence=0.40, reason="未检测到排障关键词，默认判定为简单问答。")
+        return RouterResult(type="simple_qa", intent="knowledge_qa", confidence=0.40, reason="未检测到排障关键词，默认判定为简单问答。")
+
+
+def _parse_router_json(raw: str) -> dict[str, object]:
+    parsed = json.loads(_strip_json(raw))
+    if not isinstance(parsed, dict):
+        raise ValueError("router output must be a JSON object")
+    intent = str(parsed.get("intent", "")).strip()
+    if intent not in _INTENT_TO_LEGACY_TYPE:
+        raise ValueError("invalid router intent")
+    confidence = float(parsed.get("confidence", 0.0))
+    if not 0.0 <= confidence <= 1.0:
+        raise ValueError("router confidence out of range")
+    reason = str(parsed.get("reason", "")).strip()
+    return {"intent": intent, "confidence": confidence, "reason": reason}
+
+
+def _strip_json(raw: str) -> str:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+    return text.strip()
+
+
+def _infer_troubleshooting_intent(text_lower: str) -> str:
+    if any(keyword in text_lower for keyword in ["git", "commit", "提交", "代码", "变更"]):
+        return "git_change"
+    if any(keyword in text_lower for keyword in ["配置", "config", "不生效", "没生效"]):
+        return "config_diff"
+    return "log_analysis"

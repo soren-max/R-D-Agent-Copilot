@@ -1,19 +1,30 @@
-"""Prompt templates for final answer synthesis."""
+"""Prompt templates and file-backed prompt loading."""
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 
-SYNTHESIZER_PROMPT_VERSION = "synthesizer_prompt_v1"
+SYNTHESIZER_PROMPT_VERSION = "answer_synthesizer_prompt_v020"
 FALLBACK_PROMPT_VERSION = "fallback_prompt_v1"
+PROMPT_DIR = Path(__file__).resolve().parents[1] / "prompts"
 
-ANSWER_SYSTEM_PROMPT = (
-    "你是一个研发排障智能助手。你只能根据输入的工具结果、知识库检索结果和执行链路生成中文回答。"
-    "禁止编造工具结果之外的信息。回答必须结构清晰，包含初步判断、证据、建议处理方式。"
-    "如果工具失败，需要明确说明。"
-)
+
+def load_prompt(prompt_name: str) -> tuple[str, str]:
+    """Load a prompt file and return (content, version)."""
+
+    path = PROMPT_DIR / f"{prompt_name}.txt"
+    content = path.read_text(encoding="utf-8")
+    version = ""
+    for line in content.splitlines()[:8]:
+        if line.startswith("prompt_version:"):
+            version = line.split(":", 1)[1].strip()
+            break
+    return content, version or f"{prompt_name}_v020"
+
+ANSWER_SYSTEM_PROMPT, SYNTHESIZER_PROMPT_VERSION = load_prompt("answer_synthesizer_prompt")
 
 
 def build_answer_user_prompt(

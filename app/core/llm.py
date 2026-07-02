@@ -173,7 +173,8 @@ class LLMClient:
     def generate(self, system_prompt: str, user_prompt: str) -> LLMGeneration:
         if not self.settings.enabled:
             raise LLMDisabledError("LLM is disabled. Set LLM_ENABLED=true to enable it.")
-        if not self.settings.deepseek_api_key:
+        api_key = self.settings.api_key or self.settings.deepseek_api_key
+        if not api_key:
             raise MissingAPIKeyError("DEEPSEEK_API_KEY is required when LLM is enabled.")
 
         factory = self._openai_factory or OpenAI
@@ -181,7 +182,7 @@ class LLMClient:
             raise LLMDependencyError("OpenAI SDK is not installed.")
 
         client = factory(
-            api_key=self.settings.deepseek_api_key,
+            api_key=api_key,
             base_url=self.settings.base_url,
         )
         response = client.chat.completions.create(

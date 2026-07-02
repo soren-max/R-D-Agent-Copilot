@@ -20,6 +20,8 @@ class LLMSettings:
     provider: str = "deepseek"
     model: str = "deepseek-v4-flash"
     base_url: str = "https://api.deepseek.com"
+    timeout_seconds: float = 15.0
+    api_key: str = field(default="", repr=False)
     deepseek_api_key: str = field(default="", repr=False)
 
 
@@ -28,10 +30,17 @@ def get_llm_settings(load_env: bool = True) -> LLMSettings:
 
     if load_env:
         load_dotenv()
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("DEEPSEEK_API_KEY", "")
+    try:
+        timeout_seconds = float(os.getenv("LLM_TIMEOUT_SECONDS", "15"))
+    except ValueError:
+        timeout_seconds = 15.0
     return LLMSettings(
         enabled=_parse_bool(os.getenv("LLM_ENABLED"), default=False),
         provider=os.getenv("LLM_PROVIDER", "deepseek"),
         model=os.getenv("LLM_MODEL", "deepseek-v4-flash"),
         base_url=os.getenv("LLM_BASE_URL", "https://api.deepseek.com"),
-        deepseek_api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+        timeout_seconds=timeout_seconds,
+        api_key=api_key,
+        deepseek_api_key=api_key,
     )
