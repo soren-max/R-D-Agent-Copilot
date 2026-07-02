@@ -30,6 +30,8 @@ from app.core.prompt import (
     build_answer_user_prompt,
 )
 
+SYNTHESIZER_PROMPT_NAME = "answer_synthesizer_prompt"
+
 INSUFFICIENT_EVIDENCE_ANSWER = "当前知识库证据不足，建议补充日志、配置或相关文档后再判断。"
 
 
@@ -106,6 +108,11 @@ class AnswerSynthesizer:
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": "insufficient_evidence",
+                "prompt_name": SYNTHESIZER_PROMPT_NAME,
+                "model": self.llm_client.settings.model,
+                "raw_llm_output": "",
+                "parsed_output": None,
+                "error_message": "insufficient_evidence",
                 "prompt_version": FALLBACK_PROMPT_VERSION,
                 "llm_usage": zero_usage(self.llm_client.settings, source="grounding_guard").model_dump(),
             }
@@ -123,6 +130,11 @@ class AnswerSynthesizer:
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": "llm_disabled",
+                "prompt_name": SYNTHESIZER_PROMPT_NAME,
+                "model": self.llm_client.settings.model,
+                "raw_llm_output": "",
+                "parsed_output": None,
+                "error_message": "llm_disabled",
                 "prompt_version": FALLBACK_PROMPT_VERSION,
                 "llm_usage": zero_usage(self.llm_client.settings, source="llm_disabled").model_dump(),
             }
@@ -145,6 +157,11 @@ class AnswerSynthesizer:
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": _llm_error_code(exc),
+                "prompt_name": SYNTHESIZER_PROMPT_NAME,
+                "model": self.llm_client.settings.model,
+                "raw_llm_output": "",
+                "parsed_output": None,
+                "error_message": _llm_error_code(exc),
                 "prompt_version": FALLBACK_PROMPT_VERSION,
                 "llm_usage": zero_usage(
                     self.llm_client.settings,
@@ -157,8 +174,10 @@ class AnswerSynthesizer:
         if isinstance(generation, LLMGeneration):
             answer = generation.content
             usage = replace(generation.usage, latency_ms=llm_latency_ms)
+            raw_output = generation.content
         else:
             answer = str(generation)
+            raw_output = answer
             usage = estimated_usage(
                 self.llm_client.settings,
                 system_prompt,
@@ -172,7 +191,12 @@ class AnswerSynthesizer:
             "answer_source": "llm",
             "llm_used": True,
             "llm_error": None,
+            "prompt_name": SYNTHESIZER_PROMPT_NAME,
             "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+            "model": self.llm_client.settings.model,
+            "raw_llm_output": raw_output,
+            "parsed_output": None,
+            "error_message": "",
             "llm_usage": usage.model_dump(),
         }
 
@@ -223,7 +247,7 @@ class Synthesizer:
         self, query: str, tool_results: list[ToolCallRecord] | list[dict[str, Any]]
     ) -> str:
         if not tool_results:
-            return "暂未获取到工具执行结果，无法进行分析。"
+            return "当前证据不足：暂未获取到工具执行结果，无法进行分析。"
 
         # 收集各工具结果摘要
         log_result = ""
@@ -249,42 +273,50 @@ class Synthesizer:
             elif record.tool == "rag_retriever" and record.error:
                 rag_result = "知识库证据不足。"
 
-        # 合成三段式回答
-        paragraphs: list[str] = []
-
-        # 1. 初步判断
+        judgment: list[str] = []
         if has_error:
-            paragraphs.append(
+            judgment.append(
                 f"初步判断「{query}」可能与系统异常、配置差异或最近代码变更有关。"
             )
         else:
-            paragraphs.append(f"针对「{query}」，以下是排查结果：")
+            judgment.append(f"针对「{query}」，以下是基于当前证据的排查结果。")
 
         if has_failed_tool:
-            paragraphs.append("部分工具查询失败，以下判断基于已成功返回的数据。")
+            judgment.append("部分工具查询失败，以下判断基于已成功返回的数据。")
 
-        # 2. 证据
+        evidence_lines: list[str] = []
         if log_result:
-            paragraphs.append(f"工具证据：【日志分析】{log_result}")
+            evidence_lines.append(f"工具证据：【日志分析】{log_result}")
         if config_result:
-            paragraphs.append(f"工具证据：【配置分析】{config_result}")
+            evidence_lines.append(f"工具证据：【配置分析】{config_result}")
         if git_result:
-            paragraphs.append(f"工具证据：【代码变更】{git_result}")
+            evidence_lines.append(f"工具证据：【代码变更】{git_result}")
         if rag_result:
             source_suffix = f" 来源：{rag_sources}" if rag_sources else ""
-            paragraphs.append(f"知识库补充：{rag_result}{source_suffix}")
+            evidence_lines.append(f"知识库补充：{rag_result}{source_suffix}")
 
-        # 3. 建议
-        suggestions: list[str] = []
+        if not evidence_lines:
+            return "当前证据不足：未获得可用于回答的工具证据或知识库 evidence。"
+
+        steps: list[str] = []
         if has_error:
-            suggestions.append("建议优先查看对应服务的详细错误日志，定位异常堆栈。")
+            steps.append("优先查看对应服务的详细错误日志，定位异常堆栈。")
         if config_result and "不一致" in config_result:
-            suggestions.append("建议核对各环境的配置差异，确保 prod 环境配置正确。")
+            steps.append("核对各环境的配置差异，确保 prod 环境配置正确。")
         if git_result:
-            suggestions.append("建议回查最近的代码提交，确认变更是否引入了问题。")
-        if not suggestions:
-            suggestions.append("建议进一步检查系统状态和监控指标。")
+            steps.append("回查最近的代码提交，确认变更是否引入了问题。")
+        if not steps:
+            steps.append("继续补充日志、配置或 Git 变更证据后再确认根因。")
 
-        paragraphs.append("【建议处理方式】" + " ".join(suggestions))
+        risks = ["以上结论只基于当前 Tools 和 RAG evidence，不包含外部系统实时状态。"]
+        if has_failed_tool:
+            risks.append("存在工具失败，根因判断可能不完整。")
+
+        paragraphs = [
+            "【初步判断】" + " ".join(judgment),
+            "【证据】" + "\n".join(evidence_lines),
+            "【排查步骤】建议处理方式：" + " ".join(steps),
+            "【风险提示】" + " ".join(risks),
+        ]
 
         return "\n\n".join(paragraphs)

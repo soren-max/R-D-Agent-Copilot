@@ -38,7 +38,12 @@ class Tracer:
         graph_name: str = "",
         llm_used: bool = False,
         llm_error: str = "",
+        prompt_name: str = "",
         prompt_version: str = "",
+        model: str = "",
+        raw_llm_output: str = "",
+        parsed_output: dict[str, Any] | None = None,
+        error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
         rag_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -55,7 +60,12 @@ class Tracer:
             latency_ms=latency_ms,
             llm_used=llm_used,
             llm_error=llm_error,
+            prompt_name=prompt_name,
             prompt_version=prompt_version,
+            model=model,
+            raw_llm_output=raw_llm_output,
+            parsed_output=parsed_output,
+            error_message=error_message,
             llm_usage=llm_usage,
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
@@ -65,6 +75,12 @@ class Tracer:
             retrieved_count=(rag_metadata or {}).get("retrieved_count"),
             grounding_status=(rag_metadata or {}).get("grounding_status", ""),
             retrieval_latency_ms=(rag_metadata or {}).get("retrieval_latency_ms"),
+            query=(rag_metadata or {}).get("query", ""),
+            retrieved_chunks=(rag_metadata or {}).get("retrieved_chunks", []),
+            rewritten_queries=(rag_metadata or {}).get("rewritten_queries", []),
+            query_expansions=(rag_metadata or {}).get("query_expansions", []),
+            evidence=(rag_metadata or {}).get("evidence", []),
+            no_evidence_reason=(rag_metadata or {}).get("no_evidence_reason", ""),
         ))
 
     def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
@@ -121,7 +137,12 @@ class Tracer:
         answer_source: str,
         llm_used: bool,
         llm_error: str | None,
+        prompt_name: str = "",
         prompt_version: str = "",
+        model: str = "",
+        raw_llm_output: str = "",
+        parsed_output: dict[str, Any] | None = None,
+        error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
     ) -> None:
         """记录 synthesizer 阶段的 LLM 使用情况。"""
@@ -131,7 +152,12 @@ class Tracer:
             engine="deepseek" if llm_used else "fallback",
             llm_used=llm_used,
             llm_error=llm_error or "",
+            prompt_name=prompt_name,
             prompt_version=prompt_version,
+            model=model,
+            raw_llm_output=raw_llm_output,
+            parsed_output=parsed_output,
+            error_message=error_message,
             llm_usage=llm_usage,
         )
 

@@ -35,13 +35,33 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("router")
     router = IntentRouter()
     route_result = router.route(request.query)
-    tracer.end_stage("router", output=f"type={route_result.type}, confidence={route_result.confidence}")
+    tracer.end_stage(
+        "router",
+        output=f"type={route_result.type}, intent={route_result.intent}, confidence={route_result.confidence}",
+        prompt_name=route_result.prompt_name,
+        prompt_version=route_result.prompt_version,
+        model=route_result.model,
+        raw_llm_output=route_result.raw_llm_output,
+        parsed_output=route_result.parsed_output,
+        error_message=route_result.error_message,
+        fallback_used=route_result.fallback_used,
+    )
 
     # ── 2. Planner ──
     tracer.start_stage("planner")
     planner = Planner()
     plan = planner.plan(request.query, route_result)
-    tracer.end_stage("planner", output=f"plan_type={plan.plan_type}, steps={len(plan.steps)}")
+    tracer.end_stage(
+        "planner",
+        output=f"plan_type={plan.plan_type}, task_type={plan.task_type}, steps={len(plan.steps)}",
+        prompt_name=plan.prompt_name,
+        prompt_version=plan.prompt_version,
+        model=plan.model,
+        raw_llm_output=plan.raw_llm_output,
+        parsed_output=plan.parsed_output,
+        error_message=plan.error_message,
+        fallback_used=plan.fallback_used,
+    )
 
     # ── 3. Executor ──
     tracer.start_stage("executor")
@@ -69,7 +89,12 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         answer_source=synthesis.get("answer_source", "fallback"),
         llm_used=synthesis.get("llm_used", False),
         llm_error=synthesis.get("llm_error"),
+        prompt_name=synthesis.get("prompt_name", ""),
         prompt_version=synthesis.get("prompt_version", "unknown"),
+        model=synthesis.get("model", ""),
+        raw_llm_output=synthesis.get("raw_llm_output", ""),
+        parsed_output=synthesis.get("parsed_output"),
+        error_message=synthesis.get("error_message", ""),
         llm_usage=llm_usage,
     )
     tracer.set_final_answer(answer)

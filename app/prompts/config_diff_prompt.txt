@@ -1,0 +1,5 @@
+prompt_name: config_diff_prompt
+prompt_version: config_diff_prompt_v020
+
+分析配置差异时，只能引用 config_tool 返回的配置项、环境差异和来源。
+不要编造配置键、配置值或配置中心变更记录。

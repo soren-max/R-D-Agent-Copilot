@@ -16,6 +16,7 @@ from app.rag.retriever import LocalKnowledgeRetriever
 from app.tools.config_tool import ConfigTool
 from app.tools.git_tool import GitTool
 from app.tools.log_tool import LogTool
+from apps.api.app.rag.retriever import KeywordRetriever
 
 
 class AgentGraphState(TypedDict):
@@ -194,23 +195,66 @@ class _RAGRetrieverTool:
 
     def __init__(self):
         self._retriever = LocalKnowledgeRetriever()
+        self._keyword_retriever = KeywordRetriever()
 
     def run(self, query: str) -> dict[str, Any]:
         retrieval = self._retriever.retrieve(query, top_k=5, score_threshold=0.12, retrieval_type="hybrid")
+        keyword_retrieval = self._keyword_retriever.retrieve_with_evidence(query, top_k=5)
         documents = retrieval.get("documents", [])
         source = ",".join(dict.fromkeys(doc["source"] for doc in documents))
+        if not documents and keyword_retrieval["retrieved_chunks"]:
+            documents = [
+                {
+                    "content": chunk["content"],
+                    "source": chunk["source"],
+                    "title": chunk["title"],
+                    "section": chunk["title"],
+                    "chunk_id": chunk["chunk_id"],
+                    "score": chunk.get("score", 0.0),
+                    "retrieval_type": "keyword",
+                }
+                for chunk in keyword_retrieval["retrieved_chunks"]
+            ]
+            source = ",".join(dict.fromkeys(str(doc["source"]) for doc in documents))
+        evidence = keyword_retrieval["evidence"] or [
+            {
+                "source": doc.get("source", ""),
+                "chunk_id": doc.get("chunk_id", ""),
+                "content_excerpt": str(doc.get("content", ""))[:260],
+                "score": doc.get("score", 0.0),
+            }
+            for doc in documents
+        ]
+        retrieved_chunks = keyword_retrieval["retrieved_chunks"] or [
+            {
+                "chunk_id": doc.get("chunk_id", ""),
+                "source": doc.get("source", ""),
+                "title": doc.get("title", ""),
+                "content": doc.get("content", ""),
+                "keywords": [],
+                "score": doc.get("score", 0.0),
+                "retrieval_type": doc.get("retrieval_type", "hybrid"),
+            }
+            for doc in documents
+        ]
         rag_metadata = {
+            "query": query,
+            "rewritten_queries": keyword_retrieval.get("rewritten_queries", [query]),
+            "query_expansions": keyword_retrieval.get("query_expansions", []),
             "retrieval_top_k": retrieval.get("retrieval_top_k", 5),
             "score_threshold": retrieval.get("score_threshold", 0.12),
-            "retrieved_count": retrieval.get("retrieved_count", len(documents)),
-            "grounding_status": retrieval.get("grounding_status", "insufficient_evidence"),
+            "retrieved_count": len(documents),
+            "grounding_status": "grounded" if documents else keyword_retrieval["grounding_status"],
+            "no_evidence_reason": "" if documents else keyword_retrieval["no_evidence_reason"],
             "retrieval_latency_ms": retrieval.get("retrieval_latency_ms", 0),
             "retrieval_type": retrieval.get("retrieval_type", "hybrid"),
             "fallback_used": retrieval.get("fallback_used", False),
             "vector_available": retrieval.get("vector_available", False),
+            "retrieved_chunks": retrieved_chunks,
+            "evidence": evidence,
         }
 
-        if error := retrieval.get("error"):
+        if not documents and (error := retrieval.get("error")):
             return {
                 "tool_name": self.name,
                 "result": "知识库证据不足。" if error == "insufficient_evidence" else "知识库中未检索到直接相关内容。",

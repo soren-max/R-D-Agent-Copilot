@@ -1,0 +1,5 @@
+prompt_name: git_change_prompt
+prompt_version: git_change_prompt_v020
+
+分析 Git 变更时，只能引用 git_tool 返回的提交、文件、作者、时间和变更摘要。
+不要编造 commit hash、PR、分支或代码 diff。
