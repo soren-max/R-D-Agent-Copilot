@@ -10,6 +10,7 @@ const navItems = [
   { href: "/knowledge", label: "Knowledge Base", icon: "◎" },
   { href: "/evaluation", label: "Evaluation", icon: "◆" },
   { href: "/safety", label: "Safety Guard", icon: "△" },
+  { href: "/settings", label: "Settings", icon: "◌" },
 ];
 
 export function Sidebar() {
