@@ -11,6 +11,7 @@ from apps.api.app.rag.chunker import KnowledgeChunk, extract_keywords
 class SearchHit:
     chunk: KnowledgeChunk
     score: float
+    retrieval_type: str = "keyword"
 
 
 class KeywordSearchIndex:
@@ -34,7 +35,7 @@ class KeywordSearchIndex:
             if not matched:
                 continue
             score = min(1.0, len(matched) / max(1, len(query_set)) + 0.08 * len(keyword_overlap))
-            hits.append(SearchHit(chunk=chunk, score=round(score, 4)))
+            hits.append(SearchHit(chunk=chunk, score=round(score, 4), retrieval_type="keyword"))
 
         hits.sort(key=lambda hit: (-hit.score, hit.chunk.source, hit.chunk.chunk_id))
         return hits[:top_k]

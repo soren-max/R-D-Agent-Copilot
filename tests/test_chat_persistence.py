@@ -50,10 +50,12 @@ def test_agent_steps_include_pipeline_stages():
     run = RunRepository().get_run(data["run_id"])
 
     assert [step["stage"] for step in run["steps"]] == [
+        "safety",
         "router",
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

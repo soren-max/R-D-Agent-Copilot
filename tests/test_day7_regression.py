@@ -39,10 +39,12 @@ def test_day7_simple_qa_end_to_end_with_skipped_nodes(monkeypatch):
     assert data["llm_used"] is False
     assert data["evaluation"] is not None
     assert [step["stage"] for step in data["trace"]["steps"]] == [
+        "safety",
         "router",
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

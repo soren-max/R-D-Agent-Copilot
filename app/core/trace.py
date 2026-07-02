@@ -46,6 +46,11 @@ class Tracer:
         error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
         rag_metadata: dict[str, Any] | None = None,
+        grounded_claims: list[dict[str, Any]] | None = None,
+        unsupported_claims: list[dict[str, Any]] | None = None,
+        claim_grounding_score: float | None = None,
+        planning_eval: dict[str, Any] | None = None,
+        safety: dict[str, Any] | None = None,
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -80,8 +85,44 @@ class Tracer:
             rewritten_queries=(rag_metadata or {}).get("rewritten_queries", []),
             query_expansions=(rag_metadata or {}).get("query_expansions", []),
             evidence=(rag_metadata or {}).get("evidence", []),
+            rerank_results=(rag_metadata or {}).get("rerank_results", []),
             no_evidence_reason=(rag_metadata or {}).get("no_evidence_reason", ""),
+            keyword_hit_count=(rag_metadata or {}).get("keyword_hit_count"),
+            vector_hit_count=(rag_metadata or {}).get("vector_hit_count"),
+            embedding_provider=(rag_metadata or {}).get("embedding_provider", ""),
+            embedding_model=(rag_metadata or {}).get("embedding_model", ""),
+            embedding_fallback_used=(rag_metadata or {}).get("embedding_fallback_used"),
+            embedding_fallback_reason=(rag_metadata or {}).get("embedding_fallback_reason", ""),
+            rerank_provider=(rag_metadata or {}).get("rerank_provider", ""),
+            rerank_model=(rag_metadata or {}).get("rerank_model", ""),
+            rerank_fallback_used=(rag_metadata or {}).get("rerank_fallback_used"),
+            rerank_fallback_reason=(rag_metadata or {}).get("rerank_fallback_reason", ""),
+            grounded_claims=grounded_claims or [],
+            unsupported_claims=unsupported_claims or [],
+            claim_grounding_score=claim_grounding_score,
+            expected_intent=(planning_eval or {}).get("expected_intent", ""),
+            actual_intent=(planning_eval or {}).get("actual_intent", ""),
+            router_correct=(planning_eval or {}).get("router_correct"),
+            expected_tools=(planning_eval or {}).get("expected_tools", []),
+            actual_tools=(planning_eval or {}).get("actual_tools", []),
+            missing_tools=(planning_eval or {}).get("missing_tools", []),
+            extra_tools=(planning_eval or {}).get("extra_tools", []),
+            plan_quality_score=(planning_eval or {}).get("plan_quality_score"),
+            failure_reasons=(planning_eval or {}).get("failure_reasons", []),
+            safety_status=(safety or {}).get("safety_status", ""),
+            safety_risk_level=(safety or {}).get("risk_level", ""),
+            safety_reasons=(safety or {}).get("reasons", []),
+            blocked_tools=(safety or {}).get("blocked_tools", []),
+            filtered_kb_sources=(safety or {}).get("filtered_kb_sources", []),
         ))
+
+    def end_safety_stage(self, safety: dict[str, Any]) -> None:
+        self.end_stage(
+            "safety",
+            output=f"status={safety.get('safety_status', 'allowed')}, risk={safety.get('risk_level', 'low')}",
+            engine="rule_based",
+            safety=safety,
+        )
 
     def end_executor_stage(self, output: str, tool_results: list[ToolCallRecord]) -> None:
         """记录 executor 阶段，并保存每个工具调用的状态摘要。"""
@@ -105,6 +146,10 @@ class Tracer:
                     retrieval_latency_ms=result.rag_metadata.get("retrieval_latency_ms"),
                     retrieval_type=result.rag_metadata.get("retrieval_type", ""),
                     fallback_used=result.rag_metadata.get("fallback_used"),
+                    embedding_provider=result.rag_metadata.get("embedding_provider", ""),
+                    embedding_fallback_used=result.rag_metadata.get("embedding_fallback_used"),
+                    rerank_provider=result.rag_metadata.get("rerank_provider", ""),
+                    rerank_fallback_used=result.rag_metadata.get("rerank_fallback_used"),
                 )
                 for result in tool_results
                 if result.tool != "none"
@@ -159,6 +204,17 @@ class Tracer:
             parsed_output=parsed_output,
             error_message=error_message,
             llm_usage=llm_usage,
+        )
+
+    def end_grounding_checker_stage(self, grounding_check: dict[str, Any]) -> None:
+        """Record claim-level grounding check results."""
+        self.end_stage(
+            "grounding_checker",
+            output=f"grounding_score={grounding_check.get('grounding_score', 0.0)}",
+            engine="rule_based",
+            grounded_claims=grounding_check.get("grounded_claims", []),
+            unsupported_claims=grounding_check.get("unsupported_claims", []),
+            claim_grounding_score=grounding_check.get("grounding_score"),
         )
 
     def set_final_answer(self, answer: str) -> None:

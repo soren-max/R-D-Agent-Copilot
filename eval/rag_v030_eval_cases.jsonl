@@ -1,0 +1,20 @@
+{"query":"服务起不来，端口好像被占了","expected_sources":["apps/api/app/kb/deployment_guide.md"],"expected_keywords":["port already in use"],"expect_evidence":true}
+{"query":"服务启动失败 port already in use","expected_sources":["apps/api/app/kb/deployment_guide.md"],"expected_keywords":["listen port"],"expect_evidence":true}
+{"query":"部署后健康检查失败","expected_sources":["apps/api/app/kb/deployment_guide.md"],"expected_keywords":["health check"],"expect_evidence":true}
+{"query":"nginx 502 bad gateway 怎么排查","expected_sources":["apps/api/app/kb/nginx_error_guide.md"],"expected_keywords":["502"],"expect_evidence":true}
+{"query":"网关 502 上游服务不可用","expected_sources":["apps/api/app/kb/nginx_error_guide.md"],"expected_keywords":["upstream"],"expect_evidence":true}
+{"query":"上传文件 413 太大","expected_sources":["apps/api/app/kb/nginx_error_guide.md"],"expected_keywords":["client_max_body_size"],"expect_evidence":true}
+{"query":"Redis 连接超时怎么排查","expected_sources":["apps/api/app/kb/redis_common_issues.md"],"expected_keywords":["Redis timeout"],"expect_evidence":true}
+{"query":"缓存连接池打满 timeout","expected_sources":["apps/api/app/kb/redis_common_issues.md"],"expected_keywords":["connection pool"],"expect_evidence":true}
+{"query":"缓存命中率突然下降","expected_sources":["apps/api/app/kb/redis_common_issues.md"],"expected_keywords":["cache miss"],"expect_evidence":true}
+{"query":"数据库慢查询发布后变多","expected_sources":["apps/api/app/kb/database_slow_query.md"],"expected_keywords":["Slow Query"],"expect_evidence":true}
+{"query":"SQL 慢 缺索引 执行计划","expected_sources":["apps/api/app/kb/database_slow_query.md"],"expected_keywords":["execution plan"],"expect_evidence":true}
+{"query":"事务锁等待导致接口变慢","expected_sources":["apps/api/app/kb/database_slow_query.md"],"expected_keywords":["lock"],"expect_evidence":true}
+{"query":"CI 构建失败依赖装不上","expected_sources":["apps/api/app/kb/ci_cd_failure_cases.md"],"expected_keywords":["dependency"],"expect_evidence":true}
+{"query":"流水线 job log 失败","expected_sources":["apps/api/app/kb/ci_cd_failure_cases.md"],"expected_keywords":["job log"],"expect_evidence":true}
+{"query":"部署任务 artifact 上传后失败","expected_sources":["apps/api/app/kb/ci_cd_failure_cases.md"],"expected_keywords":["artifact"],"expect_evidence":true}
+{"query":"最近提交有风险怎么回滚","expected_sources":["apps/api/app/kb/git_rollback_playbook.md"],"expected_keywords":["revert"],"expect_evidence":true}
+{"query":"git rollback 不想改公共历史","expected_sources":["apps/api/app/kb/git_rollback_playbook.md"],"expected_keywords":["force push"],"expect_evidence":true}
+{"query":"撤销 risky commit 怎么处理","expected_sources":["apps/api/app/kb/git_rollback_playbook.md"],"expected_keywords":["risky commit"],"expect_evidence":true}
+{"query":"火星支付通道出现量子抖动","expected_sources":[],"expected_keywords":[],"expect_evidence":false}
+{"query":"完全不存在的内部代号 alpha_omega_999","expected_sources":[],"expected_keywords":[],"expect_evidence":false}

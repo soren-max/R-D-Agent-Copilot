@@ -28,7 +28,11 @@ _TROUBLESHOOTING_KEYWORDS: Final[list[tuple[str, float]]] = [
     ("不生效", 2.5), ("没生效", 2.5), ("变慢", 2.5), ("卡住", 2.5),
     ("不能用", 2.0), ("打不开", 2.0), ("连不上", 2.5), ("跑不动", 2.5),
     ("slow", 2.0), ("broken", 2.5), ("leak", 2.5), ("corrupt", 2.5),
-    ("配置", 1.0), ("回滚", 2.0), ("升级后", 2.0),
+    ("配置", 1.0), ("回滚", 2.0), ("升级后", 2.0), ("变更", 2.0), ("commit", 2.0), ("git", 2.0),
+    ("部署", 2.5), ("发布", 2.0), ("启动失败", 3.0), ("起不来", 3.0),
+    ("端口", 2.0), ("health check", 2.5), ("port already in use", 3.0),
+    ("注入", 2.5), ("越权", 2.5), ("泄露", 2.5), ("删除数据", 3.0), ("删库", 3.0),
+    ("绕过", 2.5), ("密钥", 2.5), ("prompt injection", 3.0),
 ]
 
 _QA_DEFINITION_PATTERNS: Final[list[str]] = [
@@ -53,6 +57,8 @@ _INTENT_TO_LEGACY_TYPE: Final[dict[str, str]] = {
     "log_analysis": "complex_troubleshooting",
     "config_diff": "complex_troubleshooting",
     "git_change": "complex_troubleshooting",
+    "deployment_issue": "complex_troubleshooting",
+    "safety_risk": "complex_troubleshooting",
     "unknown": "simple_qa",
 }
 
@@ -184,8 +190,14 @@ def _strip_json(raw: str) -> str:
 
 
 def _infer_troubleshooting_intent(text_lower: str) -> str:
-    if any(keyword in text_lower for keyword in ["git", "commit", "提交", "代码", "变更"]):
-        return "git_change"
+    if any(keyword in text_lower for keyword in ["注入", "越权", "泄露", "删库", "删除数据", "绕过", "prompt injection"]):
+        return "safety_risk"
     if any(keyword in text_lower for keyword in ["配置", "config", "不生效", "没生效"]):
         return "config_diff"
+    if any(keyword in text_lower for keyword in ["git", "commit", "提交", "代码", "变更"]) and "日志" not in text_lower:
+        return "git_change"
+    if any(keyword in text_lower for keyword in ["日志", "error", "exception", "异常", "报错", "500", "502", "503", "oom", "崩溃", "timeout"]):
+        return "log_analysis"
+    if any(keyword in text_lower for keyword in ["部署", "发布", "启动失败", "起不来", "端口", "health check", "port already in use", "上线", "readiness"]):
+        return "deployment_issue"
     return "log_analysis"

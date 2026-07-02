@@ -93,7 +93,7 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert data["evidence_chain"] is not None
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
-    assert trace_stages == ["router", "planner", "executor", "synthesizer", "evaluation", "evidence"]
+    assert trace_stages == ["safety", "router", "planner", "executor", "synthesizer", "grounding_checker", "evaluation", "evidence"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"
@@ -128,7 +128,7 @@ def test_troubleshooting_pipeline_executes_tools_and_trace():
     assert any("\u4e00" <= c <= "\u9fff" for c in resp.answer)
 
     trace_stages = [s.stage for s in resp.trace.steps]
-    assert trace_stages == ["router", "planner", "executor", "synthesizer"]
+    assert trace_stages == ["safety", "router", "planner", "executor", "synthesizer", "grounding_checker"]
     executor_step = [s for s in resp.trace.steps if s.stage == "executor"][0]
     assert executor_step.engine == "langgraph"
     assert executor_step.graph_name == "tool_execution_graph"

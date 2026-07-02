@@ -187,6 +187,10 @@ def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
         "retrieval_latency_ms": rag_metadata.get("retrieval_latency_ms"),
         "retrieval_type": rag_metadata.get("retrieval_type", ""),
         "fallback_used": rag_metadata.get("fallback_used"),
+        "embedding_provider": rag_metadata.get("embedding_provider", ""),
+        "embedding_fallback_used": rag_metadata.get("embedding_fallback_used"),
+        "rerank_provider": rag_metadata.get("rerank_provider", ""),
+        "rerank_fallback_used": rag_metadata.get("rerank_fallback_used"),
     }
 
 
@@ -199,7 +203,7 @@ class _RAGRetrieverTool:
 
     def run(self, query: str) -> dict[str, Any]:
         retrieval = self._retriever.retrieve(query, top_k=5, score_threshold=0.12, retrieval_type="hybrid")
-        keyword_retrieval = self._keyword_retriever.retrieve_with_evidence(query, top_k=5)
+        keyword_retrieval = self._keyword_retriever.retrieve_with_evidence(query, top_k=5, retrieval_type="hybrid")
         documents = retrieval.get("documents", [])
         source = ",".join(dict.fromkeys(doc["source"] for doc in documents))
         if not documents and keyword_retrieval["retrieved_chunks"]:
@@ -247,10 +251,21 @@ class _RAGRetrieverTool:
             "grounding_status": "grounded" if documents else keyword_retrieval["grounding_status"],
             "no_evidence_reason": "" if documents else keyword_retrieval["no_evidence_reason"],
             "retrieval_latency_ms": retrieval.get("retrieval_latency_ms", 0),
-            "retrieval_type": retrieval.get("retrieval_type", "hybrid"),
+            "retrieval_type": keyword_retrieval.get("retrieval_type", retrieval.get("retrieval_type", "hybrid")),
+            "keyword_hit_count": keyword_retrieval.get("keyword_hit_count", 0),
+            "vector_hit_count": keyword_retrieval.get("vector_hit_count", 0),
             "fallback_used": retrieval.get("fallback_used", False),
             "vector_available": retrieval.get("vector_available", False),
+            "embedding_provider": keyword_retrieval.get("embedding_provider", "local"),
+            "embedding_model": keyword_retrieval.get("embedding_model", ""),
+            "embedding_fallback_used": keyword_retrieval.get("embedding_fallback_used", False),
+            "embedding_fallback_reason": keyword_retrieval.get("embedding_fallback_reason", ""),
+            "rerank_provider": keyword_retrieval.get("rerank_provider", "local"),
+            "rerank_model": keyword_retrieval.get("rerank_model", ""),
+            "rerank_fallback_used": keyword_retrieval.get("rerank_fallback_used", False),
+            "rerank_fallback_reason": keyword_retrieval.get("rerank_fallback_reason", ""),
             "retrieved_chunks": retrieved_chunks,
+            "rerank_results": keyword_retrieval.get("rerank_results", []),
             "evidence": evidence,
         }
 

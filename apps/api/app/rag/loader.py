@@ -32,7 +32,10 @@ def load_markdown_documents(kb_dir: Path | None = None) -> list[MarkdownDocument
                 content=content,
             )
         )
-    return documents
+    from apps.api.app.safety.kb_filter import filter_malicious_documents
+
+    allowed, _ = filter_malicious_documents(documents)
+    return allowed
 
 
 def _first_heading(content: str) -> str | None:

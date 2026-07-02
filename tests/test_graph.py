@@ -122,10 +122,12 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
     assert [item["tool_name"] for item in data["tool_results"]] == ["rag_retriever"]
     assert data["evaluation"] is not None
     assert [step["stage"] for step in data["trace"]["steps"]] == [
+        "safety",
         "router",
         "planner",
         "executor",
         "synthesizer",
+        "grounding_checker",
         "evaluation",
         "evidence",
     ]

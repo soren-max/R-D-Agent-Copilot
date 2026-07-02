@@ -5,7 +5,7 @@ prompt_version: router_prompt_v020
 
 请只输出 JSON，不要输出 Markdown：
 {
-  "intent": "knowledge_qa | log_analysis | config_diff | git_change | unknown",
+  "intent": "knowledge_qa | log_analysis | config_diff | git_change | deployment_issue | safety_risk | unknown",
   "confidence": 0.0,
   "reason": "简短原因"
 }
@@ -15,6 +15,8 @@ prompt_version: router_prompt_v020
 - log_analysis：日志、报错、异常、500/502/503、超时、崩溃等排查。
 - config_diff：配置不一致、配置变更、配置不生效。
 - git_change：代码提交、Git 变更、最近 commit、发布后代码问题。
+- deployment_issue：部署、发布、启动失败、端口占用、健康检查失败。
+- safety_risk：危险命令、越权、数据删除、密钥泄露、prompt injection 等安全风险。
 - unknown：无法判断。
 
 置信度低于 0.6 时应输出 unknown 或低置信度结果。
