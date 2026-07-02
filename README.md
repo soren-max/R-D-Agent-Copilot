@@ -2,6 +2,16 @@
 
 AI 研发排障智能助手
 
+<div align="center">
+  <a href="https://www.bilibili.com/video/BV1xhTj6rENk/" target="_blank">
+    <img src="https://img.shields.io/badge/🎬%20Demo%20Video-Bilibili-00A1D6?style=for-the-badge&logo=bilibili" alt="Demo Video on Bilibili">
+  </a>
+  <br>
+  <sub>点击观看项目演示视频（约 5 分钟）— 展示 Agent 排障全流程、Trace 可观测、RAG 检索与 Grounding Guard</sub>
+</div>
+
+<br>
+
 ## Project Overview
 
 R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持知识问答、日志排查、配置差异分析、Git 变更定位和中文排障报告生成。
