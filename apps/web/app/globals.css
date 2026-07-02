@@ -2,92 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Light tokens ── */
 :root {
   color-scheme: light;
   --bg-page: #f8fafc;
+  --bg-subtle: #f1f5f9;
   --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
   --border: #e2e8f0;
+  --border-light: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --accent: #059669;
-  --accent-light: #d1fae5;
-  --accent-dark: #065f46;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 0 rgb(15 23 42 / 0.03);
-  --shadow-elevated: 0 14px 35px -28px rgb(15 23 42 / 0.45), 0 4px 14px -10px rgb(15 23 42 / 0.18);
+  --text-tertiary: #94a3b8;
+  --text-muted: #cbd5e1;
+  --accent: #4f46e5;
+  --accent-light: #eef2ff;
+  --accent-dark: #3730a3;
+  --success: #059669;
+  --success-bg: #ecfdf5;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+  --info: #0284c7;
+  --info-bg: #f0f9ff;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-card: 0 1px 2px rgba(15,23,42,0.04), 0 1px 0 rgba(15,23,42,0.03);
+  --shadow-elevated: 0 14px 35px -28px rgba(15,23,42,0.45), 0 4px 14px -10px rgba(15,23,42,0.18);
+  --sidebar-width: 240px;
 }
 
-* {
-  box-sizing: border-box;
+/* ── Dark tokens ── */
+.dark {
+  color-scheme: dark;
+  --bg-page: #0f172a;
+  --bg-subtle: #1e293b;
+  --bg-card: #1e293b;
+  --bg-elevated: #334155;
+  --border: #334155;
+  --border-light: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+  --accent: #818cf8;
+  --accent-light: #1e1b4b;
+  --accent-dark: #6366f1;
+  --success: #34d399;
+  --success-bg: #064e3b;
+  --warning: #fbbf24;
+  --warning-bg: #78350f;
+  --error: #f87171;
+  --error-bg: #7f1d1d;
+  --info: #38bdf8;
+  --info-bg: #0c4a6e;
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-elevated: 0 14px 35px -28px rgba(0,0,0,0.6), 0 4px 14px -10px rgba(0,0,0,0.3);
 }
+
+/* ── Base ── */
+* { box-sizing: border-box; }
 
 html {
   min-height: 100%;
 }
 
 body {
-  min-height: 100%;
+  min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 20% -10%, rgba(16, 185, 129, 0.08), transparent 28rem),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--bg-page);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans SC", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
 
 /* ── Focus ring ── */
-input:focus-visible,
-textarea:focus-visible,
-button:focus-visible,
-a:focus-visible {
+*:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+  box-shadow: 0 0 0 2.5px var(--accent), 0 0 0 4.5px rgba(79,70,229,0.15);
+  border-radius: var(--radius-sm);
 }
 
-/* ── Utility classes ── */
+/* ── Selection ── */
+::selection { background: rgba(79,70,229,0.15); color: var(--text-primary); }
+.dark ::selection { background: rgba(129,140,248,0.2); }
+
+/* ── Utility component classes ── */
 @layer components {
   .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white/95;
+    @apply rounded-xl border;
+    border-color: var(--border);
+    background: var(--bg-card);
     box-shadow: var(--shadow-card);
-  }
-  .card-interactive {
-    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300;
-    box-shadow: var(--shadow-card);
-  }
-  .card-interactive:hover {
-    box-shadow: var(--shadow-elevated);
   }
   .card-header {
-    @apply border-b border-slate-100 px-5 py-4;
+    @apply border-b px-5 py-3.5;
+    border-color: var(--border-light);
   }
-  .card-body {
-    @apply px-5 py-5;
-  }
+  .card-body { @apply px-5 py-4; }
 
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset;
   }
-  .badge-green  { @apply badge bg-emerald-50 text-emerald-700 ring-emerald-200/70; }
-  .badge-slate  { @apply badge bg-slate-100 text-slate-600 ring-slate-200/80; }
-  .badge-blue   { @apply badge bg-sky-50 text-sky-700 ring-sky-200/70; }
-  .badge-amber  { @apply badge bg-amber-50 text-amber-700 ring-amber-200/70; }
-  .badge-red    { @apply badge bg-red-50 text-red-700 ring-red-200/70; }
+  .badge-brand  { @apply badge; background: var(--accent-light); color: var(--accent-dark); ring-color: var(--accent); }
+  .badge-slate  { @apply badge; background: var(--bg-subtle); color: var(--text-secondary); ring-color: var(--border); }
+  .badge-success { @apply badge; background: var(--success-bg); color: var(--success); }
+  .badge-warning { @apply badge; background: var(--warning-bg); color: var(--warning); }
+  .badge-error  { @apply badge; background: var(--error-bg); color: var(--error); }
 
   .status-dot { @apply inline-block h-2 w-2 rounded-full; }
-  .dot-green  { @apply status-dot bg-emerald-500; }
-  .dot-red    { @apply status-dot bg-red-500; }
-  .dot-slate  { @apply status-dot bg-slate-400; }
-  .dot-amber  { @apply status-dot bg-amber-400; }
+  .dot-success { @apply status-dot; background: var(--success); }
+  .dot-warning { @apply status-dot; background: var(--warning); }
+  .dot-error   { @apply status-dot; background: var(--error); }
+  .dot-muted   { @apply status-dot; background: var(--text-muted); }
+  .dot-info    { @apply status-dot; background: var(--info); }
+
+  .metric-value {
+    @apply text-2xl font-semibold tracking-tight;
+  }
 }
