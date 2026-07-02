@@ -37,7 +37,7 @@ export function ChatPanel({ query, isLoading, onQueryChange, onSubmit, onExample
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
               {isLoading ? (
                 <>
@@ -57,7 +57,7 @@ export function ChatPanel({ query, isLoading, onQueryChange, onSubmit, onExample
                 type="button"
                 onClick={() => onExample(ex)}
                 disabled={isLoading}
-                className="min-h-10 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-700 disabled:opacity-50"
+                className="min-h-10 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-all hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-700 disabled:opacity-50"
               >
                 {ex}
               </button>

@@ -56,9 +56,9 @@ export function AgentPipeline({ route, trace, isLoading = false }: AgentPipeline
               <div key={stage.id} className="relative flex items-start gap-3 pb-4 last:pb-0">
                 {idx < stages.length - 1 && <div className={`absolute left-[11px] top-4 h-full w-px ${status === "done" ? "bg-emerald-200" : "bg-slate-200"}`} />}
                 <div className="relative z-10 mt-0.5"><StageDot status={status} /></div>
-                <div className="flex-1 min-w-0">
+                <div className={`flex-1 min-w-0 ${status === "pending" ? "opacity-40" : ""}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-900">
+                    <span className={`text-sm font-semibold ${status === "pending" ? "text-slate-400" : "text-slate-900"}`}>
                       {stage.label} <span className="font-normal text-slate-400">{stage.zh}</span>
                     </span>
                     <StageLabel status={status} />

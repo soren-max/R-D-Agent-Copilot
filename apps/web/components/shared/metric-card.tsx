@@ -17,14 +17,16 @@ export function MetricCard({ label, value, trend, secondary }: MetricCardProps) 
     neutral: "→",
   };
 
+  const isEmpty = value === "—" || value === "" || value === undefined || value === null;
+
   return (
-    <div className="card px-4 py-3.5">
+    <div className={`card px-4 py-3.5 transition-all ${isEmpty ? "opacity-50" : ""}`}>
       <p className="text-xs font-medium" style={{ color: "var(--text-tertiary)" }}>
         {label}
       </p>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className="metric-value" style={{ color: "var(--text-primary)" }}>
-          {value}
+        <span className={`metric-value ${isEmpty ? "font-normal" : ""}`} style={{ color: isEmpty ? "var(--text-muted)" : "var(--text-primary)" }}>
+          {isEmpty ? "暂无数据" : value}
         </span>
         {trend && (
           <span className={`text-sm font-semibold ${trendColors[trend]}`}>

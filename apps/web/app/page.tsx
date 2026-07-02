@@ -68,10 +68,10 @@ export default function Home() {
     <AppShell title="Agent Console">
       {/* Quick metrics bar */}
       <div className="mb-5 grid gap-3 sm:grid-cols-4">
-        <MetricCard label="意图识别" value={routeType === "complex_troubleshooting" ? "复杂排障" : routeType === "simple_qa" ? "简单问答" : "—"} secondary={result?.route?.confidence ? `置信度 ${result.route.confidence}` : undefined} />
+        <MetricCard label="意图识别" value={routeType === "complex_troubleshooting" ? "复杂排障" : routeType === "simple_qa" ? "简单问答" : ""} secondary={result?.route?.confidence ? `置信度 ${result.route.confidence}` : undefined} />
         <MetricCard label="工具调用" value={toolResults?.length ?? 0} secondary={toolResults?.filter(t => t.status === "success").length + " 成功"} />
-        <MetricCard label="质量评分" value={evalScore != null ? `${Math.round(evalScore * 100)}%` : "—"} />
-        <MetricCard label="回答来源" value={result?.answer_source === "llm" ? "DeepSeek" : result?.answer_source ? "规则兜底" : "—"} />
+        <MetricCard label="质量评分" value={evalScore != null ? `${Math.round(evalScore * 100)}%` : ""} />
+        <MetricCard label="回答来源" value={result?.answer_source === "llm" ? "DeepSeek" : result?.answer_source ? "规则兜底" : ""} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -113,6 +113,15 @@ export default function Home() {
 
         <aside className="min-w-0">
           <div className="space-y-4 lg:sticky lg:top-20">
+            {!result && !isLoading && (
+              <div className="card px-5 py-6 text-center">
+                <div className="text-2xl mb-3" style={{ color: "var(--text-muted)" }}>◌</div>
+                <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>等待执行</p>
+                <p className="mt-1 text-xs leading-5" style={{ color: "var(--text-tertiary)" }}>
+                  输入研发故障问题，点击开始排障<br />即可查看完整 Agent 执行链路
+                </p>
+              </div>
+            )}
             <AgentPipeline route={result?.route} trace={result?.trace} isLoading={isLoading} />
             <RunSummary result={result} isLoading={isLoading} />
             <LLMUsageCard usage={result?.llm_usage} llmUsed={result?.llm_used} />
