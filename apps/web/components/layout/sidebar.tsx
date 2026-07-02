@@ -38,10 +38,10 @@ export function Sidebar() {
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              R&D Agent
+              R&D Agent Copilot
             </p>
-            <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
-              Copilot
+            <p className="text-[10px] font-medium tracking-wide" style={{ color: "var(--text-tertiary)" }}>
+              Observable AI Agent Console
             </p>
           </div>
         )}

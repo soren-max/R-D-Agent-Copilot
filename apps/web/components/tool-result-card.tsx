@@ -26,8 +26,9 @@ function summarize(text: string | undefined, max = 180) {
 
 export function ToolResultCard({ toolResult }: ToolResultCardProps) {
   const st = toolResult.status || "";
-  const style = statusStyles[st] || { label: st, dot: "bg-slate-400", border: "border-slate-200", bg: "bg-slate-50/30" };
+  const style = statusStyles[st] || { label: st || "暂无记录", dot: "bg-slate-300", border: "border-slate-200", bg: "bg-slate-50/30" };
   const toolKey = toolResult.tool_name || toolResult.tool || "unknown";
+  const displayName = toolLabels[toolKey] || (toolKey === "unknown" ? "暂无调用记录" : toolKey);
 
   return (
     <article className={`card-interactive rounded-2xl border ${style.border} ${style.bg} p-4`}>
@@ -35,7 +36,7 @@ export function ToolResultCard({ toolResult }: ToolResultCardProps) {
         <div className="flex items-center gap-2">
           <span className={`inline-block h-2 w-2 rounded-full ${style.dot}`} />
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">{toolLabels[toolKey] || toolKey}</h3>
+            <h3 className="text-sm font-semibold text-slate-900">{displayName}</h3>
             <p className="mt-0.5 font-mono text-[11px] text-slate-400">{toolKey}</p>
           </div>
         </div>
