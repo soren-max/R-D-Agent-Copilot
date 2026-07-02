@@ -1,0 +1,62 @@
+import type { TraceData } from "@/lib/api";
+
+export const mockTraceData: TraceData = {
+  trace_id: "mock-trace-001",
+  steps: [
+    {
+      stage: "router",
+      engine: "rule_based",
+      output: "type=complex_troubleshooting, confidence=0.95",
+      latency_ms: 2,
+      tool_calls: [],
+      skipped_nodes: [],
+      fallback_used: false,
+    },
+    {
+      stage: "planner",
+      engine: "template",
+      output: "plan_type=troubleshooting_plan, steps=4",
+      latency_ms: 1,
+      tool_calls: [],
+      skipped_nodes: [],
+      fallback_used: false,
+    },
+    {
+      stage: "executor",
+      engine: "langgraph",
+      graph_name: "tool_execution_graph",
+      output: "Tools executed: log_tool, config_tool, git_tool, rag_retriever",
+      latency_ms: 245,
+      tool_calls: [
+        { node: "log_node", tool_name: "log_tool", status: "success", latency_ms: 52, retry_count: 0 },
+        { node: "config_node", tool_name: "config_tool", status: "success", latency_ms: 31, retry_count: 0 },
+        { node: "git_node", tool_name: "git_tool", status: "success", latency_ms: 28, retry_count: 0 },
+        { node: "rag_node", tool_name: "rag_retriever", status: "success", latency_ms: 67, retry_count: 0 },
+      ],
+      skipped_nodes: [],
+      fallback_used: false,
+      llm_used: true,
+    },
+    {
+      stage: "synthesizer",
+      engine: "deepseek",
+      output: "answer_source=llm",
+      latency_ms: 1840,
+      llm_used: true,
+      llm_error: null,
+      tool_calls: [],
+      skipped_nodes: [],
+      fallback_used: false,
+    },
+    {
+      stage: "evaluation",
+      engine: "rule_based",
+      output: "overall_score=0.92, tool_success_rate=1.0, trace_completeness=1.0, rag_relevance=0.85, answer_groundedness=0.90, latency_score=0.75",
+      latency_ms: 15,
+      tool_calls: [],
+      skipped_nodes: [],
+      fallback_used: false,
+    },
+  ],
+  final_answer: "初步判断订单接口 500 与支付服务超时有关。日志显示 order-service 调用 payment-service 超时 3100ms，配置工具发现 payment.timeout 在 prod 为 1s 而 dev 为 3s，存在环境配置不一致。最近代码变更新增了支付预校验流程。建议先统一配置，再回查最近提交。",
+};
