@@ -10,13 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.chat import router as chat_router
 from app.api.mock import router as mock_router
+from app.api.ops import router as ops_router
 from app.api.runs import router as runs_router
 from app.api.stream import router as stream_router
 
 app = FastAPI(
     title="R&D Agent Copilot",
-    version="0.1.0",
-    description="AI 研发排障智能助手 — Day1 Agent Pipeline",
+    version="0.8.0",
+    description="AI 研发排障智能助手 — Agent Pipeline with RAG, Safety, and Observability",
 )
 
 app.add_middleware(
@@ -31,8 +32,4 @@ app.include_router(chat_router)
 app.include_router(stream_router)
 app.include_router(runs_router)
 app.include_router(mock_router)
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "version": "0.1.0"}
+app.include_router(ops_router)

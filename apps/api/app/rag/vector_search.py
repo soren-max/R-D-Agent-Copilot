@@ -4,22 +4,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from apps.api.app.rag.chunker import KnowledgeChunk, extract_keywords
+from apps.api.app.rag.chunker import KnowledgeChunk
+from apps.api.app.rag.embedding_provider import EmbeddingProvider, LocalHashEmbeddingProvider, SparseVector
 from apps.api.app.rag.keyword_search import SearchHit
 
 
 @dataclass(frozen=True)
 class VectorSearchIndex:
     chunks: list[KnowledgeChunk]
+    embedding_provider: EmbeddingProvider | None = None
 
     def search(self, query: str, top_k: int = 3) -> list[SearchHit]:
-        query_vector = _hash_vector(extract_keywords(query))
+        provider = self.embedding_provider or LocalHashEmbeddingProvider()
+        query_vector = provider.embed_query(query)
         if not query_vector:
             return []
 
         hits: list[SearchHit] = []
         for chunk in self.chunks:
-            chunk_vector = _hash_vector(chunk.keywords)
+            chunk_vector = provider.embed_document(chunk.content, chunk.keywords)
             score = _cosine(query_vector, chunk_vector)
             if score <= 0:
                 continue
@@ -29,14 +32,7 @@ class VectorSearchIndex:
         return hits[:top_k]
 
 
-def _hash_vector(tokens: list[str], buckets: int = 128) -> dict[int, float]:
-    vector: dict[str, float] = {}
-    for token in tokens:
-        vector[token] = vector.get(token, 0.0) + 1.0
-    return vector
-
-
-def _cosine(left: dict[str, float], right: dict[str, float]) -> float:
+def _cosine(left: SparseVector, right: SparseVector) -> float:
     if not left or not right:
         return 0.0
     dot = sum(value * right.get(index, 0.0) for index, value in left.items())

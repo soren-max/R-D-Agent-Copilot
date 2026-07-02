@@ -9,3 +9,5 @@ def isolated_database_url(tmp_path, monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "deepseek-v4-flash")
     monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "")
+    monkeypatch.setenv("RAG_EMBEDDING_PROVIDER", "local")
+    monkeypatch.setenv("RAG_RERANK_PROVIDER", "local")

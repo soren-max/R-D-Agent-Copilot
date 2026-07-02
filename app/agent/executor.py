@@ -14,6 +14,7 @@ from typing import Any
 
 from app.core.models import Plan, ToolCallRecord
 from app.agent.graph import build_execution_graph
+from apps.api.app.safety.tool_policy import validate_plan_tools
 
 
 class ToolExecutionResults(list[ToolCallRecord]):
@@ -44,6 +45,41 @@ class Executor:
 
         返回实际执行的 ToolCallRecord 列表，跳过节点保存在返回列表的 skipped_nodes 元数据中。
         """
+        policy = validate_plan_tools(plan)
+        if not policy.allowed:
+            records = [
+                ToolCallRecord(
+                    step_id=step.id,
+                    action=step.action,
+                    node="tool_policy_guard",
+                    tool=step.tool,
+                    tool_name=step.tool,
+                    description=step.description,
+                    result="",
+                    confidence=0.0,
+                    source="tool_policy",
+                    error="tool_not_allowed",
+                    status="failed" if step.tool in policy.blocked_tools else "skipped",
+                )
+                for step in plan.steps
+            ]
+            return ToolExecutionResults(
+                records,
+                [
+                    {
+                        "node": "tool_policy_guard",
+                        "tool_name": tool,
+                        "status": "failed",
+                        "retry_count": 0,
+                        "error": "tool_not_allowed",
+                        "latency_ms": 0,
+                        "source": "tool_policy",
+                    }
+                    for tool in policy.blocked_tools
+                ],
+                [],
+                True,
+            )
         graph_result = self._graph.invoke({
             "query": query,
             "plan": plan.model_dump(),

@@ -14,6 +14,8 @@ from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 from apps.api.app.rag.grounding_checker import GroundingChecker
+from apps.api.app.safety.prompt_injection import detect_prompt_injection
+from apps.api.app.safety.tool_policy import validate_plan_tools
 
 _DEFAULT_LLM_USAGE = {
     "provider": "deepseek",
@@ -31,6 +33,26 @@ _DEFAULT_LLM_USAGE = {
 def run_pipeline(request: ChatRequest) -> ChatResponse:
     """执行完整 Agent 链路并返回结果。"""
     tracer = Tracer()
+    tracer.start_stage("safety")
+    safety_check = detect_prompt_injection(request.query)
+    safety_payload = safety_check.model_dump()
+    tracer.end_safety_stage(safety_payload)
+    if safety_check.blocked:
+        answer = "当前请求存在高风险安全问题，已阻止执行工具。请移除越权、密钥泄露或破坏性操作后再提交排障问题。"
+        tracer.set_final_answer(answer)
+        snapshot = tracer.snapshot()
+        return ChatResponse(
+            answer=answer,
+            answer_source="safety_guard",
+            llm_used=False,
+            llm_error="safety_blocked",
+            llm_usage=_DEFAULT_LLM_USAGE,
+            route={"type": "simple_qa", "intent": "safety_risk", "confidence": 1.0, "reason": "safety blocked"},
+            plan={"plan_type": "safety_blocked", "task_type": "safety_risk", "steps": []},
+            tool_results=[],
+            trace=snapshot,
+            safety=safety_payload,
+        )
 
     # ── 1. Router ──
     tracer.start_stage("router")
@@ -52,6 +74,12 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("planner")
     planner = Planner()
     plan = planner.plan(request.query, route_result)
+    tool_policy = validate_plan_tools(plan, safety_check)
+    safety_payload = {
+        **safety_payload,
+        "blocked_tools": tool_policy.blocked_tools,
+        "tool_policy_reasons": tool_policy.reasons,
+    }
     tracer.end_stage(
         "planner",
         output=f"plan_type={plan.plan_type}, task_type={plan.task_type}, steps={len(plan.steps)}",
@@ -63,6 +91,31 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         error_message=plan.error_message,
         fallback_used=plan.fallback_used,
     )
+    if not tool_policy.allowed:
+        answer = "当前请求触发安全工具策略，已阻止执行操作型工具。建议仅基于知识库说明进行安全边界确认。"
+        tracer.start_stage("synthesizer")
+        tracer.end_synthesizer_stage(
+            answer_source="safety_guard",
+            llm_used=False,
+            llm_error="tool_policy_blocked",
+            prompt_name="safety_guard",
+            prompt_version="safety_guard_v060",
+            llm_usage=_DEFAULT_LLM_USAGE,
+        )
+        tracer.set_final_answer(answer)
+        snapshot = tracer.snapshot()
+        return ChatResponse(
+            answer=answer,
+            answer_source="safety_guard",
+            llm_used=False,
+            llm_error="tool_policy_blocked",
+            llm_usage=_DEFAULT_LLM_USAGE,
+            route=route_result,
+            plan=plan,
+            tool_results=[],
+            trace=snapshot,
+            safety=safety_payload,
+        )
 
     # ── 3. Executor ──
     tracer.start_stage("executor")
@@ -126,6 +179,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         grounded_claims=grounding_check.get("grounded_claims", []),
         unsupported_claims=grounding_check.get("unsupported_claims", []),
         grounding_check=grounding_check,
+        safety=safety_payload,
     )
 
 

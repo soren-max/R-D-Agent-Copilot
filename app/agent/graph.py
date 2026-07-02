@@ -187,6 +187,10 @@ def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
         "retrieval_latency_ms": rag_metadata.get("retrieval_latency_ms"),
         "retrieval_type": rag_metadata.get("retrieval_type", ""),
         "fallback_used": rag_metadata.get("fallback_used"),
+        "embedding_provider": rag_metadata.get("embedding_provider", ""),
+        "embedding_fallback_used": rag_metadata.get("embedding_fallback_used"),
+        "rerank_provider": rag_metadata.get("rerank_provider", ""),
+        "rerank_fallback_used": rag_metadata.get("rerank_fallback_used"),
     }
 
 
@@ -252,6 +256,14 @@ class _RAGRetrieverTool:
             "vector_hit_count": keyword_retrieval.get("vector_hit_count", 0),
             "fallback_used": retrieval.get("fallback_used", False),
             "vector_available": retrieval.get("vector_available", False),
+            "embedding_provider": keyword_retrieval.get("embedding_provider", "local"),
+            "embedding_model": keyword_retrieval.get("embedding_model", ""),
+            "embedding_fallback_used": keyword_retrieval.get("embedding_fallback_used", False),
+            "embedding_fallback_reason": keyword_retrieval.get("embedding_fallback_reason", ""),
+            "rerank_provider": keyword_retrieval.get("rerank_provider", "local"),
+            "rerank_model": keyword_retrieval.get("rerank_model", ""),
+            "rerank_fallback_used": keyword_retrieval.get("rerank_fallback_used", False),
+            "rerank_fallback_reason": keyword_retrieval.get("rerank_fallback_reason", ""),
             "retrieved_chunks": retrieved_chunks,
             "rerank_results": keyword_retrieval.get("rerank_results", []),
             "evidence": evidence,

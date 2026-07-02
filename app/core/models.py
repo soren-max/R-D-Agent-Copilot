@@ -128,6 +128,10 @@ class TraceToolCall(BaseModel):
     retrieval_latency_ms: int | None = None
     retrieval_type: str = ""
     fallback_used: bool | None = None
+    embedding_provider: str = ""
+    embedding_fallback_used: bool | None = None
+    rerank_provider: str = ""
+    rerank_fallback_used: bool | None = None
 
 
 class TraceSkippedNode(BaseModel):
@@ -242,6 +246,14 @@ class TraceStep(BaseModel):
         default=None,
         description="v0.3.2 vector 命中数量",
     )
+    embedding_provider: str = Field(default="", description="v0.8.0 active embedding provider")
+    embedding_model: str = Field(default="", description="v0.8.0 active embedding model")
+    embedding_fallback_used: bool | None = Field(default=None, description="v0.8.0 embedding provider fallback")
+    embedding_fallback_reason: str = Field(default="", description="v0.8.0 embedding fallback reason")
+    rerank_provider: str = Field(default="", description="v0.8.0 active rerank provider")
+    rerank_model: str = Field(default="", description="v0.8.0 active rerank model")
+    rerank_fallback_used: bool | None = Field(default=None, description="v0.8.0 rerank provider fallback")
+    rerank_fallback_reason: str = Field(default="", description="v0.8.0 rerank fallback reason")
     grounded_claims: list[dict[str, Any]] = Field(
         default_factory=list,
         description="v0.4.0 有 evidence 支撑的 claims",
@@ -263,6 +275,11 @@ class TraceStep(BaseModel):
     extra_tools: list[str] = Field(default_factory=list, description="v0.5.0 unexpected tools")
     plan_quality_score: float | None = Field(default=None, description="v0.5.0 planning quality score")
     failure_reasons: list[str] = Field(default_factory=list, description="v0.5.0 planning eval failure reasons")
+    safety_status: str = Field(default="", description="v0.6.0 safety status")
+    safety_risk_level: str = Field(default="", description="v0.6.0 safety risk level")
+    safety_reasons: list[str] = Field(default_factory=list, description="v0.6.0 safety reasons")
+    blocked_tools: list[str] = Field(default_factory=list, description="v0.6.0 blocked tools")
+    filtered_kb_sources: list[str] = Field(default_factory=list, description="v0.6.0 filtered KB sources")
 
 
 class TraceData(BaseModel):
@@ -326,4 +343,8 @@ class ChatResponse(BaseModel):
     grounding_check: dict[str, Any] | None = Field(
         default=None,
         description="v0.4.0 claim-level grounding check result",
+    )
+    safety: dict[str, Any] | None = Field(
+        default=None,
+        description="v0.6.0 safety check and tool policy result",
     )

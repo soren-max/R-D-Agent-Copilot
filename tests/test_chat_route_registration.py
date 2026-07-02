@@ -12,6 +12,8 @@ def test_main_app_registers_chat_and_runs_routes():
     assert any(path == "/chat" and methods and "POST" in methods for path, methods in routes)
     assert any(path == "/runs" and methods and "GET" in methods for path, methods in routes)
     assert any(path == "/runs/{run_id}" and methods and "GET" in methods for path, methods in routes)
+    assert any(path == "/health" and methods and "GET" in methods for path, methods in routes)
+    assert any(path == "/config/check" and methods and "GET" in methods for path, methods in routes)
 
 
 def test_post_chat_route_preserves_day1_and_current_fields():
