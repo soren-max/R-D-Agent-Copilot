@@ -252,11 +252,84 @@ export type PersistedToolCall = {
   created_at?: string | null;
 };
 
+// ── New V2 / Harness types ──
+
+export type FinalReport = {
+  summary?: string;
+  root_cause?: string;
+  evidence?: string[];
+  fix_steps?: string[];
+  confidence?: number;
+  risks?: string[];
+};
+
+export type ProviderMetadata = {
+  prompt_version?: string;
+  model_provider?: string;
+  model_name?: string;
+  llm_enabled?: boolean;
+  fallback_used?: boolean;
+  schema_valid?: boolean;
+  generation_latency_ms?: number;
+  provider_error_code?: string;
+  provider_error_message?: string;
+};
+
+export type ContextMetadata = {
+  total_chars_before?: number;
+  total_chars_after?: number;
+  compression_ratio?: number;
+  reduced_sections?: number;
+  current_query_preserved?: boolean;
+  memory_hit_count?: number;
+};
+
+export type IncidentMemoryEntry = {
+  run_id?: string;
+  query?: string;
+  match_reason?: string;
+  freshness_status?: "fresh" | "weak" | "stale";
+  recalled_at?: string;
+};
+
+export type IncidentMemory = {
+  memory_hit_count?: number;
+  fresh_count?: number;
+  weak_count?: number;
+  stale_count?: number;
+  entries?: IncidentMemoryEntry[];
+};
+
+export type CheckpointData = {
+  status?: string;
+  completed_steps?: string[];
+  pending_steps?: string[];
+  last_error?: string;
+  updated_at?: string;
+};
+
+export type EvaluationV2Metrics = {
+  context?: Record<string, number>;
+  tool?: Record<string, number>;
+  rag?: Record<string, number>;
+  memory?: Record<string, number>;
+  resume?: Record<string, number>;
+  evidence?: Record<string, number>;
+  provider?: Record<string, number>;
+};
+
 export type RunDetail = {
   run: RunSummary;
   steps: PersistedRunStep[];
   tool_calls: PersistedToolCall[];
   evaluation?: EvaluationResult | null;
+  // Extended harness fields (all optional — backward compatible)
+  final_report?: FinalReport | null;
+  provider_metadata?: ProviderMetadata | null;
+  context_metadata?: ContextMetadata | null;
+  incident_memory?: IncidentMemory | null;
+  checkpoint?: CheckpointData | null;
+  evaluation_v2?: EvaluationV2Metrics | null;
 };
 
 export async function postChat(query: string): Promise<ChatResponse> {
