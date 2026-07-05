@@ -11,6 +11,8 @@ from app.agent.executor import Executor
 from app.agent.planner import Planner
 from app.agent.router import IntentRouter
 from app.agent.synthesizer import AnswerSynthesizer
+from app.core.config import get_llm_settings
+from app.core.llm import zero_usage
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 from app.resume import CheckpointStore, RunCheckpoint
@@ -19,17 +21,8 @@ from apps.api.app.rag.grounding_checker import GroundingChecker
 from apps.api.app.safety.prompt_injection import detect_prompt_injection
 from apps.api.app.safety.tool_policy import validate_plan_tools
 
-_DEFAULT_LLM_USAGE = {
-    "provider": "deepseek",
-    "model": "deepseek-v4-flash",
-    "prompt_tokens": 0,
-    "completion_tokens": 0,
-    "total_tokens": 0,
-    "estimated_cost": 0,
-    "currency": "USD",
-    "latency_ms": 0,
-    "source": "fallback",
-}
+def _default_llm_usage(source: str = "fallback") -> dict[str, object]:
+    return zero_usage(get_llm_settings(), source=source).model_dump()
 
 
 def run_pipeline(request: ChatRequest) -> ChatResponse:
@@ -55,7 +48,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
             answer_source="safety_guard",
             llm_used=False,
             llm_error="safety_blocked",
-            llm_usage=_DEFAULT_LLM_USAGE,
+            llm_usage=_default_llm_usage("safety_guard"),
             route={"type": "simple_qa", "intent": "safety_risk", "confidence": 1.0, "reason": "safety blocked"},
             plan={"plan_type": "safety_blocked", "task_type": "safety_risk", "steps": []},
             tool_results=[],
@@ -117,7 +110,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
             llm_error="tool_policy_blocked",
             prompt_name="safety_guard",
             prompt_version="safety_guard_v060",
-            llm_usage=_DEFAULT_LLM_USAGE,
+            llm_usage=_default_llm_usage("safety_guard"),
         )
         tracer.set_final_answer(answer)
         snapshot = tracer.snapshot()
@@ -126,7 +119,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
             answer_source="safety_guard",
             llm_used=False,
             llm_error="tool_policy_blocked",
-            llm_usage=_DEFAULT_LLM_USAGE,
+            llm_usage=_default_llm_usage("safety_guard"),
             route=route_result,
             plan=plan,
             tool_results=[],
@@ -177,7 +170,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         context_package=context_package,
     )
     answer = synthesis.get("answer", "")
-    llm_usage = synthesis.get("llm_usage", _DEFAULT_LLM_USAGE)
+    llm_usage = synthesis.get("llm_usage", _default_llm_usage())
     tracer.end_synthesizer_stage(
         answer_source=synthesis.get("answer_source", "fallback"),
         llm_used=synthesis.get("llm_used", False),

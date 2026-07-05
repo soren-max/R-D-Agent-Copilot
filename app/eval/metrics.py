@@ -126,6 +126,7 @@ def evidence_metrics(evidence_chain: dict[str, Any] | None, answer: str = "") ->
 def provider_metrics(trace: dict[str, Any]) -> ProviderMetricsV2:
     synthesizer = _stage(trace, "synthesizer")
     metadata = synthesizer.get("provider_metadata") or {}
+    usage = synthesizer.get("llm_usage") or {}
     if metadata:
         error_code = str(metadata.get("provider_error_code") or "")
         return ProviderMetricsV2(
@@ -139,8 +140,23 @@ def provider_metrics(trace: dict[str, Any]) -> ProviderMetricsV2:
             provider_error_count=int(bool(error_code)),
             provider_error_code=error_code,
             provider_error_message=str(metadata.get("provider_error_message") or ""),
+            prompt_tokens=int(metadata.get("prompt_tokens") or usage.get("prompt_tokens") or 0),
+            completion_tokens=int(metadata.get("completion_tokens") or usage.get("completion_tokens") or 0),
+            total_tokens=int(metadata.get("total_tokens") or usage.get("total_tokens") or 0),
+            generation_cost_estimate=float(
+                metadata.get("generation_cost_estimate")
+                or usage.get("generation_cost_estimate")
+                or usage.get("estimated_cost")
+                or 0.0
+            ),
+            daily_token_usage=int(metadata.get("daily_token_usage") or usage.get("daily_token_usage") or 0),
+            daily_token_limit_exceeded=bool(metadata.get("daily_token_limit_exceeded", False)),
+            provider_status=str(metadata.get("provider_status") or ""),
+            fallback_provider_used=bool(metadata.get("fallback_provider_used", False)),
+            circuit_open=bool(metadata.get("circuit_open", False)),
+            timeout_ms=int(metadata.get("timeout_ms") or 0),
+            retry_count=int(metadata.get("retry_count") or 0),
         )
-    usage = synthesizer.get("llm_usage") or {}
     return ProviderMetricsV2(
         prompt_version=str(synthesizer.get("prompt_version") or ""),
         llm_enabled=bool(synthesizer.get("llm_used", False)),
@@ -152,6 +168,11 @@ def provider_metrics(trace: dict[str, Any]) -> ProviderMetricsV2:
         provider_error_count=int(bool(synthesizer.get("llm_error"))),
         provider_error_code=str(synthesizer.get("llm_error") or ""),
         provider_error_message=str(synthesizer.get("error_message") or ""),
+        prompt_tokens=int(usage.get("prompt_tokens") or 0),
+        completion_tokens=int(usage.get("completion_tokens") or 0),
+        total_tokens=int(usage.get("total_tokens") or 0),
+        generation_cost_estimate=float(usage.get("generation_cost_estimate") or usage.get("estimated_cost") or 0.0),
+        daily_token_usage=int(usage.get("daily_token_usage") or 0),
     )
 
 

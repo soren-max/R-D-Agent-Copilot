@@ -103,6 +103,17 @@ class ProviderMetricsV2(BaseModel):
     provider_error_count: int = 0
     provider_error_code: str = ""
     provider_error_message: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    generation_cost_estimate: float = 0.0
+    daily_token_usage: int = 0
+    daily_token_limit_exceeded: bool = False
+    provider_status: str = ""
+    fallback_provider_used: bool = False
+    circuit_open: bool = False
+    timeout_ms: int = 0
+    retry_count: int = 0
 
 
 class EvaluationReportV2(BaseModel):

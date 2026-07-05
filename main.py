@@ -13,6 +13,7 @@ from app.api.mock import router as mock_router
 from app.api.ops import router as ops_router
 from app.api.runs import router as runs_router
 from app.api.stream import router as stream_router
+from app.core.rate_limit import rate_limit_middleware
 
 app = FastAPI(
     title="R&D Agent Copilot",
@@ -27,6 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(rate_limit_middleware)
 
 app.include_router(chat_router)
 app.include_router(stream_router)
