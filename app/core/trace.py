@@ -54,6 +54,12 @@ class Tracer:
         safety: dict[str, Any] | None = None,
         memory_created: bool | None = None,
         memory_id: str = "",
+        checkpoint_created: bool | None = None,
+        checkpoint_status: str = "",
+        resume_from_run_id: str = "",
+        resumed_completed_steps_count: int | None = None,
+        resumed_pending_steps_count: int | None = None,
+        resume_reason: str = "",
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -120,6 +126,12 @@ class Tracer:
             filtered_kb_sources=(safety or {}).get("filtered_kb_sources", []),
             memory_created=memory_created,
             memory_id=memory_id,
+            checkpoint_created=checkpoint_created,
+            checkpoint_status=checkpoint_status,
+            resume_from_run_id=resume_from_run_id,
+            resumed_completed_steps_count=resumed_completed_steps_count,
+            resumed_pending_steps_count=resumed_pending_steps_count,
+            resume_reason=resume_reason,
         ))
 
     def end_safety_stage(self, safety: dict[str, Any]) -> None:
@@ -196,6 +208,8 @@ class Tracer:
         error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
         context_metadata: dict[str, Any] | None = None,
+        checkpoint_created: bool | None = None,
+        checkpoint_status: str = "",
     ) -> None:
         """记录 synthesizer 阶段的 LLM 使用情况。"""
         self.end_stage(
@@ -212,6 +226,8 @@ class Tracer:
             error_message=error_message,
             llm_usage=llm_usage,
             context_metadata=context_metadata,
+            checkpoint_created=checkpoint_created,
+            checkpoint_status=checkpoint_status,
         )
 
     def end_grounding_checker_stage(self, grounding_check: dict[str, Any]) -> None:

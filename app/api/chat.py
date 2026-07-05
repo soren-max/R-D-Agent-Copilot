@@ -16,6 +16,7 @@ from app.eval import RuleBasedEvaluator
 from app.evidence import EvidenceChainBuilder
 from app.memory import MemoryStore, build_memory_from_payload
 from app.persistence.chat_persistence import persist_chat_response
+from app.resume import ResumeService
 
 router = APIRouter(tags=["chat"])
 
@@ -163,3 +164,10 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
         response.trace.persistence_error = "persistence_write_failed"
 
     return response
+
+
+@router.post("/chat/resume")
+def chat_resume_endpoint() -> dict[str, object]:
+    """Continue the latest resumable checkpoint."""
+
+    return ResumeService().resume_latest()
