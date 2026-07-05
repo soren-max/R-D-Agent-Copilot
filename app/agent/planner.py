@@ -7,12 +7,9 @@ complex_troubleshooting → 四步：query_logs → check_config → analyze_git
 
 from __future__ import annotations
 
-import json
-from typing import Any, Final
+from typing import Final
 
 from app.core.models import Plan, PlanStep, RouterResult
-from app.core.prompt import load_prompt
-from app.llms.base import LLMProvider, get_llm_provider
 
 _ALLOWED_TOOLS: Final[set[str]] = {"log_tool", "config_tool", "git_tool", "rag_retriever"}
 _STEP_ACTION_BY_TOOL: Final[dict[str, str]] = {
@@ -24,48 +21,17 @@ _STEP_ACTION_BY_TOOL: Final[dict[str, str]] = {
 
 
 class Planner:
-    """Router 结果 → Plan。"""
+    """Router 结果 → deterministic Plan。
 
-    def __init__(self, llm_provider: LLMProvider | None = None) -> None:
-        self.llm_provider = llm_provider or get_llm_provider()
-        self.prompt_name = "planner_prompt"
-        self.system_prompt, self.prompt_version = load_prompt(self.prompt_name)
+    ``llm_provider`` is accepted only as a deprecated compatibility argument.
+    Planner must never call an LLM or accept model-selected tools.
+    """
+
+    def __init__(self, llm_provider: object | None = None) -> None:
+        self.legacy_llm_provider_ignored = llm_provider is not None
 
     def plan(self, query: str, route_result: RouterResult) -> Plan:
-        llm_plan = self._plan_with_llm(query, route_result)
-        if llm_plan is not None:
-            return llm_plan
-
         return self._plan_rule_based(query, route_result)
-
-    def _plan_with_llm(self, query: str, route_result: RouterResult) -> Plan | None:
-        if not self.llm_provider.is_available():
-            return None
-        try:
-            response = self.llm_provider.generate(
-                self.prompt_name,
-                self.system_prompt,
-                json.dumps({
-                    "query": query,
-                    "route_result": route_result.model_dump(),
-                }, ensure_ascii=False),
-            )
-            parsed = _parse_planner_json(response.content)
-            return _plan_from_parsed(
-                parsed,
-                prompt_name=self.prompt_name,
-                prompt_version=self.prompt_version,
-                model=response.model,
-                raw_llm_output=response.raw_output,
-                fallback_used=False,
-            )
-        except Exception as exc:
-            fallback = self._plan_rule_based(query, route_result)
-            fallback.prompt_name = self.prompt_name
-            fallback.prompt_version = self.prompt_version
-            fallback.error_message = type(exc).__name__
-            fallback.fallback_used = True
-            return fallback
 
     def _plan_rule_based(self, query: str, route_result: RouterResult) -> Plan:
         intent_type = route_result.type
@@ -168,79 +134,3 @@ class Planner:
                          expected_output="相关排障知识片段"),
             ],
         )
-
-
-def _parse_planner_json(raw: str) -> dict[str, Any]:
-    parsed = json.loads(_strip_json(raw))
-    if not isinstance(parsed, dict):
-        raise ValueError("planner output must be a JSON object")
-    task_type = str(parsed.get("task_type", "")).strip() or "unknown"
-    steps = parsed.get("steps")
-    if not isinstance(steps, list) or not steps:
-        raise ValueError("planner steps must be a non-empty list")
-    normalized_steps: list[dict[str, str]] = []
-    for step in steps:
-        if not isinstance(step, dict):
-            raise ValueError("planner step must be an object")
-        tool = str(step.get("tool", "")).strip()
-        if tool not in _ALLOWED_TOOLS:
-            raise ValueError("planner step uses unsupported tool")
-        step_name = str(step.get("step_name", "")).strip() or _STEP_ACTION_BY_TOOL[tool]
-        normalized_steps.append({
-            "step_name": step_name,
-            "tool": tool,
-            "input": str(step.get("input", "")).strip(),
-            "expected_output": str(step.get("expected_output", "")).strip(),
-        })
-    if not any(step["tool"] == "rag_retriever" for step in normalized_steps):
-        normalized_steps.append({
-            "step_name": "retrieve_knowledge",
-            "tool": "rag_retriever",
-            "input": "用户问题",
-            "expected_output": "相关知识库片段",
-        })
-    return {"task_type": task_type, "steps": normalized_steps}
-
-
-def _plan_from_parsed(
-    parsed: dict[str, Any],
-    prompt_name: str,
-    prompt_version: str,
-    model: str,
-    raw_llm_output: str,
-    fallback_used: bool,
-) -> Plan:
-    task_type = str(parsed["task_type"])
-    plan_type = "simple_qa" if task_type == "knowledge_qa" else "troubleshooting_plan"
-    steps = [
-        PlanStep(
-            id=index,
-            action=_STEP_ACTION_BY_TOOL[step["tool"]],
-            tool=step["tool"],
-            description=step["expected_output"] or step["step_name"],
-            step_name=step["step_name"],
-            input=step["input"],
-            expected_output=step["expected_output"],
-        )
-        for index, step in enumerate(parsed["steps"], start=1)
-    ]
-    return Plan(
-        plan_type=plan_type,
-        task_type=task_type,
-        steps=steps,
-        prompt_name=prompt_name,
-        prompt_version=prompt_version,
-        model=model,
-        raw_llm_output=raw_llm_output,
-        parsed_output=parsed,
-        fallback_used=fallback_used,
-    )
-
-
-def _strip_json(raw: str) -> str:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
-    return text.strip()

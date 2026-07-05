@@ -37,10 +37,10 @@ User Query
 ## 3. Module Responsibility
 
 Router：
-只负责把用户问题分类为 `simple_qa` 或 `complex_troubleshooting`。Router 不调用工具，不生成最终答案，也不拆解任务。
+只负责把用户问题分类为 `simple_qa` 或 `complex_troubleshooting`。Router 只使用规则和关键词评分，不调用 LLM、不调用工具、不生成最终答案，也不拆解任务。
 
 Planner：
-只负责根据 `query` 和 Router 输出生成结构化执行计划。简单问答会规划 `retrieve_knowledge`，复杂排障会规划日志、配置、Git 和 RAG 检索步骤。
+只负责根据 `query` 和 Router 输出生成结构化执行计划。Planner 只使用 deterministic plan template 和工具白名单；简单问答会规划 `retrieve_knowledge`，复杂排障会规划日志、配置、Git 和 RAG 检索步骤。即使 `LLM_ENABLED=true`，Planner 也不调用 LLM、不接受模型返回的工具选择。
 
 Executor：
 只负责执行 Planner 给出的计划，不重新规划，不修改 Planner 输出，也不生成最终答案。

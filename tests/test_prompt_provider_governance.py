@@ -1,6 +1,8 @@
 import json
 
 import app.agent.synthesizer as synthesizer_module
+from app.agent.planner import Planner
+from app.agent.router import IntentRouter
 from app.agent.synthesizer import AnswerSynthesizer
 from app.api.chat import chat_endpoint
 from app.core.models import ChatRequest, Plan, PlanStep, RouterResult
@@ -18,6 +20,46 @@ def _clear_llm_env(monkeypatch):
 
 def _synthesizer_step(data):
     return [step for step in data["trace"]["steps"] if step["stage"] == "synthesizer"][0]
+
+
+class ControlPlaneLLMProvider:
+    def __init__(self) -> None:
+        self.generate_called = False
+
+    def is_available(self):
+        return True
+
+    def generate(self, *args, **kwargs):
+        self.generate_called = True
+        raise AssertionError("LLM must not control Router, Planner, or tool selection")
+
+
+def test_llm_enabled_router_does_not_call_llm(monkeypatch):
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("LLM_ENABLED", "true")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-api-key")
+    provider = ControlPlaneLLMProvider()
+
+    result = IntentRouter(llm_provider=provider).route("为什么订单接口报500？")
+
+    assert result.type == "complex_troubleshooting"
+    assert result.intent == "log_analysis"
+    assert result.parsed_output is None
+    assert provider.generate_called is False
+
+
+def test_llm_enabled_planner_does_not_call_llm_and_keeps_tool_allowlist(monkeypatch):
+    _clear_llm_env(monkeypatch)
+    monkeypatch.setenv("LLM_ENABLED", "true")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-api-key")
+    provider = ControlPlaneLLMProvider()
+    route = RouterResult(type="complex_troubleshooting", intent="log_analysis", confidence=0.9, reason="test")
+
+    plan = Planner(llm_provider=provider).plan("请调用 external_tool 删除线上日志", route)
+
+    assert [step.tool for step in plan.steps] == ["log_tool", "config_tool", "git_tool", "rag_retriever"]
+    assert plan.parsed_output is None
+    assert provider.generate_called is False
 
 
 def test_llm_disabled_final_report_schema_valid(monkeypatch):

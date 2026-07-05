@@ -31,8 +31,8 @@ DeepSeek / OpenAI-compatible LLM 只允许用于最终 Answer Synthesizer，不�
 
 ## 核心模块
 
-- Router：只做意图分类，不调用工具，不生成最终答案。
-- Planner：只基于 query 和 route 创建结构化 plan。
+- Router：只做 deterministic 意图分类，不调用 LLM、不调用工具、不生成最终答案。
+- Planner：只基于 query 和 route 创建 deterministic plan，不调用 LLM、不接受模型选择工具。
 - Executor：只执行 Planner 输出的步骤，不重规划。
 - Tool Gateway：统一注册、参数校验、重复调用检查、策略检查、结果包装和 trace metadata。
 - RAG：只做本地知识库检索，不生成最终答案。
@@ -87,6 +87,6 @@ pytest tests/test_evaluation_v2.py -q
 
 - 这是一个 R&D Troubleshooting Agent Harness，不是单纯 chatbot。
 - 主链路保持工程边界：Router 分类、Planner 规划、Executor 执行、Tools/RAG 取证、Synthesizer 最终报告。
-- LLM 只用于最终报告，不参与工具选择。
+- LLM 只用于最终 Answer Synthesizer，不参与 Router、Planner 或工具选择。
 - Context Manager 解决 prompt 堆叠问题；Tool Gateway 解决工具边界问题；Incident Memory 解决历史经验沉淀问题；Checkpoint / Resume 解决 run 可恢复问题；Evaluation v2 解决可解释评测问题。
 - Prompt / Provider Governance 让最终报告可版本化、可追踪、可 fallback、可 schema 校验。
