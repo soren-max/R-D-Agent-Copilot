@@ -34,22 +34,24 @@ R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持�
 - Router：只使用 rule-based / deterministic 逻辑做意图分类，不调用 LLM。
 - Planner：只使用 deterministic plan template 和工具白名单生成执行计划，不调用 LLM。
 - LangGraph Executor：在 Executor 内部编排工具节点，支持条件执行、retry、fallback 和节点 trace。
-- Tools：提供 `log_tool`、`config_tool`、`git_tool` 和本地 `rag_retriever`。
+- Tool Gateway：统一工具注册、参数校验、策略检查、结果包装和 trace metadata。
+- Tools / RAG：提供 `log_tool`、`config_tool`、`git_tool` 和本地 `rag_retriever`。
 - Mock API Server：提供 `/mock/logs`、`/mock/configs`、`/mock/git/commits`，模拟日志平台、配置中心和 Git 平台。
 - API Adapter：通过本地 Mock API 隔离样例数据和未来真实系统 API。
-- OpenAI-Compatible LLM Provider：支持 DeepSeek/OpenAI-compatible endpoint 和本地 mock provider。
-- DeepSeek Answer Synthesizer：可选使用 DeepSeek 生成最终中文排障报告，失败时自动 fallback。
+- Context Manager：把 route、plan、tool evidence、RAG evidence、Incident Memory 和 run history 组织成可预算的 `ContextPackage`。
+- Incident Memory：把历史排障结论沉淀为带 freshness 状态的参考信息，不替代当前 evidence。
+- Checkpoint / Resume：持久化 run 状态，只恢复 pending steps，不让 LLM 判断恢复点。
+- Provider Governance：LLM provider 只接入 Answer Synthesizer，记录 prompt version、schema validation、provider metadata 和 fallback 状态。
+- Runtime Hardening：提供 provider timeout、retry、fallback、circuit breaker、token/cost metrics 和本地限流。
+- Answer Synthesizer：可选使用 DeepSeek / OpenAI-compatible provider 生成最终中文排障报告，失败时自动 fallback。
 - Trace Viewer：前端可视化展示 Router、Planner、Executor、Synthesizer 和 Evaluation 执行链路。
 - Run / Trace Persistence：使用 SQLite 持久化历史 run、step 和 tool call，支持链路回查。
-- Evaluation v1：基于工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时给出质量评分。
-- RAG Pipeline：支持本地 Markdown 入库、结构化 chunk metadata、确定性向量检索、keyword fallback、hybrid retrieval、召回评估和 grounding guard。
+- Evaluation v2：聚合 Context、Tool、RAG、Memory、Resume、Evidence、Provider、token/cost 等指标。
 - RAG Pipeline v2：支持按 `doc_type` 的 layered chunking、cleaning / dedup、keyword rerank，以及 precision / recall evaluation。
-- RAG Grounding v0.3.0：新增 `apps/api/app/kb` 本地排障知识库、关键词检索、evidence 构造和 grounded answer trace。
-- Agent Safety v0.6.0：提供 prompt injection 检测、恶意 KB 指令过滤和 Tool allowlist / denylist。
-- Deployment & Observability v0.7.0：提供 `/health`、配置检查、trace export 和本地 eval report 查询。
-- Advanced RAG v0.8.0：提供可选 OpenAI-compatible embedding / rerank provider，并保留本地 deterministic fallback。
+- Agent Safety：提供 prompt injection 检测、恶意 KB 指令过滤和 Tool allowlist / denylist。
+- Deployment & Observability：提供 `/health`、配置检查、trace export 和本地 eval report 查询。
+- Advanced RAG Providers：提供可选 OpenAI-compatible embedding / rerank provider，并保留本地 deterministic fallback。
 - Evidence Chain：将 log/config/git/rag/evaluation 输出整理为证据项、根因候选和 rule-based 置信度。
-- Prompt / Provider Governance：LLM provider 只接入 Answer Synthesizer，并记录 `prompt_name`、`prompt_version`、`model`、`raw_llm_output`、`parsed_output` 和错误信息到 Trace，支持策略回溯。
 - Production Readiness：提供结构化日志、`request_id` 透传、统一异常返回、可选统一响应体、Docker Compose 一键部署和 release checklist。
 - Docker + CI：提供 Docker Compose 本地全栈启动和 GitHub Actions CI。
 
@@ -60,12 +62,28 @@ User Query
 -> Router
 -> Planner
 -> LangGraph Executor
+-> Tool Gateway
 -> Tools / RAG
 -> Trace
+-> Context Manager
 -> Answer Synthesizer
--> Evaluation
+-> Evaluation v2
 -> Evidence Chain
 -> Response / Trace Viewer
+```
+
+```mermaid
+flowchart LR
+  API[API] --> Router
+  Router --> Planner
+  Planner --> Executor[LangGraph Executor]
+  Executor --> Gateway[Tool Gateway]
+  Gateway --> Tools[Tools / RAG]
+  Tools --> Trace
+  Trace --> Context[Context Manager]
+  Context --> Synth[Answer Synthesizer]
+  Synth --> Eval[Evaluation v2]
+  Eval --> Evidence[Evidence Chain]
 ```
 
 关键边界：
@@ -73,10 +91,23 @@ User Query
 - DeepSeek 不控制 Router、Planner 或 Tool Selection，只在 Answer Synthesizer 阶段基于已有证据生成中文回答。
 - Tools 当前通过 Adapter 调用本地 Mock API，Mock API 只读取本地样例日志、配置和 Git 数据；知识库仍通过本地 RAG 检索。后续可替换为真实企业 API Adapter。
 - Trace 记录每个执行阶段，包括 stage 输出、latency、tool calls、skipped nodes、retry、fallback、prompt_version 和 synthesizer 元数据。
-- Evaluation 在回答生成之后运行，不参与 Agent 决策，只用于质量评估和展示。
+- Evaluation v2 在回答生成之后运行，不参与 Agent 决策，只用于质量评估和展示。
 - Evidence Chain 在 Evaluation 之后运行，只基于已有工具结果、知识库结果和评估结果生成可解释证据与置信度，不调用 LLM。
 
 更多架构说明见 [docs/architecture.md](docs/architecture.md)。
+模块边界说明见 [docs/module-boundaries.md](docs/module-boundaries.md)。
+
+## Agent Harness vs 普通 RAG
+
+| 维度 | 普通 RAG Demo | R&D Agent Copilot |
+| --- | --- | --- |
+| 主流程 | `retrieve -> generate` | `classify -> plan -> execute tools -> retrieve evidence -> trace -> context governance -> synthesize -> evaluate -> resume` |
+| 工具执行 | 通常无工具链路 | Router / Planner / Executor / Tool Gateway 分层控制 |
+| LLM 权限 | 常直接参与生成，边界不一定清晰 | LLM 只用于 Answer Synthesizer，不参与 Router、Planner、Tool Selection |
+| 证据治理 | 多数只返回 chunks | 记录 tool evidence、RAG evidence、source/title/chunk_id/line_range 和 Evidence Chain |
+| 可观测性 | 通常只有最终回答 | Trace timeline、tool calls、context metadata、provider metadata、evaluation metrics |
+| 可恢复性 | 通常不支持 | Checkpoint / Resume 按 run 状态恢复 pending steps |
+| 评测 | 常靠人工看答案 | Evaluation v2 聚合 RAG、工具、上下文、provider、token/cost 等指标 |
 
 ## Tech Stack
 
@@ -205,7 +236,7 @@ app/llms/
   mock_provider.py
 ```
 
-同时保留 `apps/api/app/llms/` 和 `apps/api/app/prompts/` 兼容目录，便于后续迁移到 monorepo API layout。
+`apps/api/app/llms/` 和 `apps/api/app/prompts/` 是兼容目录，不是当前控制面的 provider 入口。目录归属见 [docs/module-boundaries.md](docs/module-boundaries.md)。
 
 ## DeepSeek Answer Synthesizer
 
@@ -229,7 +260,7 @@ RAG 读取 `data/docs` 下的本地知识文件，默认样例以 Markdown 为�
 
 RAG Pipeline v2 在此基础上增加面向研发排障的分层处理：按 `normal_doc`、`markdown_doc`、`config_file`、`log_file`、`code_file` 识别文档类型；对 runbook/Markdown 使用较大 chunk，对日志、配置和代码使用更细粒度 chunk；清洗空行、重复模板和明显乱码，同时保留错误码、异常、配置 key/value、函数名和类名等证据。检索仍先走本地向量召回，再用 keyword overlap、error code、service name、source/title 和 doc_type priority 做规则重排，并在 Evaluation v2 中记录 `precision_at_k`、`recall_at_k`、`source_coverage`、`rerank_applied` 和 `dedup_count`。
 
-v0.3.0 额外提供一条更简单、更容易审计的本地关键词 RAG 链路，位于：
+兼容 RAG helper 仍保留在：
 
 ```text
 apps/api/app/rag/
@@ -243,7 +274,7 @@ apps/api/app/rag/
   evaluation.py
 ```
 
-这条链路只读取本地 Markdown，不接向量数据库，不调用外部 embedding 服务。Chunk 结构固定包含：
+这条链路只读取本地 Markdown，不接向量数据库，不调用外部 embedding 服务。它属于 `apps/api/app/` 兼容模块，当前仍被部分 grounding 和 evaluation 测试覆盖。Chunk 结构固定包含：
 
 ```text
 chunk_id
@@ -255,13 +286,13 @@ keywords
 
 关键词检索支持 `top_k`，同时覆盖英文错误短语和中文排障关键词。无匹配时返回空列表，并将 grounding 标记为 `insufficient_evidence`。
 
-v0.3.1/v0.3.2 增加低成本高收益的 Query Rewrite、Hybrid Search 和 RAG Evaluation：
+当前 RAG helper 包含低成本高收益的 Query Rewrite、Hybrid Search 和 RAG Evaluation：
 
 - Query Rewrite：把中文排障表达扩展成可检索的英文错误短语，例如“端口被占用”扩展为 `port already in use`、`failed to start`、`listen port`。
 - Hybrid Search：keyword hits 保精准，local token-vector hits 保召回，merge 后按 `chunk_id` 去重并返回 top_k。
 - Evaluation：提供 Recall@5、Keyword Hit Rate、Grounding Score、No Evidence Rejection Accuracy、MRR 和 failed_cases，便于持续改知识库和 rewrite 规则。
 
-v0.4.0 增加 Rerank + Grounding Check，目标不是让答案更长，而是让答案更可信：
+Rerank + Grounding Check 的目标不是让答案更长，而是让答案更可信：
 
 ```text
 retrieved_chunks
@@ -292,7 +323,7 @@ apps/api/app/rag/
 
 ## Planning Evaluation
 
-v0.5.0 增加 Agent Planning Evaluation，用于评估 Router / Planner 是否选对意图、工具和步骤，让复杂 Agent 的规划质量可量化、可回放。
+Agent Planning Evaluation 用于评估 Router / Planner 是否选对意图、工具和步骤，让复杂 Agent 的规划质量可量化、可回放。
 
 核心文件：
 
@@ -362,7 +393,7 @@ plan_quality_score =
 
 Bad Case Replay 会把失败 case 保存到 `data/eval/bad_cases.jsonl`，重新运行后输出 `fixed` / `still_failed` 到 `bad_case_replay_report.md`。
 
-当前 v0.5.0 本地规划评估结果：
+当前本地规划评估结果：
 
 ```text
 total_cases: 30
@@ -374,7 +405,7 @@ average_plan_quality_score: 1.0
 failed_cases: 0
 ```
 
-### v0.5.0 Changelog
+### Historical Changelog
 
 - Added rule-based Planning Evaluation for Router and Planner.
 - Added Plan Quality Score with intent, tools, order, completeness, and safety dimensions.
@@ -384,7 +415,7 @@ failed_cases: 0
 
 ## Agent Safety
 
-v0.6.0 增加 Agent Safety，对应大模型课程中的越狱攻击和智能体安全主题。目标是在 RAG 和 Agent 工具执行链路中明确安全边界。
+Agent Safety 对应大模型课程中的越狱攻击和智能体安全主题。目标是在 RAG 和 Agent 工具执行链路中明确安全边界。
 
 核心文件：
 
@@ -428,7 +459,7 @@ tool_results=[]
 trace.stage=safety
 ```
 
-### v0.6.0 Changelog
+### Historical Changelog
 
 - Added rule-based prompt injection and dangerous request detection.
 - Added malicious KB document filtering during local Markdown loading.
@@ -438,7 +469,7 @@ trace.stage=safety
 
 ## Deployment & Observability
 
-v0.7.0 增加部署和可观测性接口，让项目更像真实后端系统，而不是 notebook demo。
+Deployment & Observability 让项目更像真实后端系统，而不是 notebook demo。
 
 新增模块：
 
@@ -467,7 +498,7 @@ GET /eval/report
 - `/trace/export/{run_id}` 导出已持久化 run 的 steps、tool_calls 和 evaluation，用于排障复盘或面试展示。
 - `/eval/report` 汇总本地规划评估、bad case replay 和 RAG failed cases 报告；可用 `?include_content=true` 返回报告内容。
 
-### v0.7.0 Changelog
+### Historical Changelog
 
 - Added deployment health endpoint with version and check summaries.
 - Added safe runtime config check without secret exposure.
@@ -476,7 +507,7 @@ GET /eval/report
 
 ## Advanced RAG Providers
 
-v0.8.0 增加 provider 抽象，让 RAG 能从 MVP 平滑升级到 production-like 架构，同时保留本地 fallback。
+Advanced RAG Providers 增加 provider 抽象，让 RAG 能从 MVP 平滑升级到 production-like 架构，同时保留本地 fallback。
 
 新增模块：
 
@@ -506,7 +537,7 @@ rerank_fallback_used
 rerank_fallback_reason
 ```
 
-### v0.8.0 Changelog
+### Historical Changelog
 
 - Added embedding provider abstraction with OpenAI-compatible optional provider.
 - Added rerank provider abstraction with OpenAI-compatible optional provider.
@@ -514,7 +545,7 @@ rerank_fallback_reason
 - Added provider fallback metadata to RAG results and Trace.
 - Added tests for provider determinism, fallback, and observability endpoints.
 
-运行 v0.3 RAG 评估：
+运行 RAG 评估：
 
 ```bash
 python scripts/eval_v030_rag.py
@@ -541,7 +572,7 @@ MRR: 0.9722
 
 ## Knowledge Base
 
-v0.3.0 知识库目录：
+当前本地 demo 知识库目录：
 
 ```text
 apps/api/app/kb/
@@ -563,7 +594,7 @@ apps/api/app/kb/
 
 ## Grounding Mechanism
 
-v0.3.0 的 grounding 规则：
+当前 grounding 规则：
 
 - Retriever 返回相关 chunks。
 - Query Rewrite 先扩展中英文排障关键词，再执行关键词检索。
@@ -671,7 +702,7 @@ curl -X POST http://127.0.0.1:8000/chat \
 - Planner 生成日志、配置、Git 和 RAG 检索计划
 - LangGraph Executor 执行工具节点并记录 trace
 - Answer Synthesizer 汇总证据生成中文排障报告
-- Evaluation v1 返回质量评分、问题和建议
+- Evaluation v2 返回质量评分、RAG 指标、provider metadata 和改进建议
 - Evidence Chain 返回 evidence_items、root_cause_candidates 和 overall_confidence
 
 更多 demo 步骤见 [docs/week1-demo.md](docs/week1-demo.md)。
