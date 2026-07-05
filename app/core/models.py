@@ -165,6 +165,10 @@ class TraceStep(BaseModel):
         default=None,
         description="synthesizer 阶段的 LLM token/cost 用量",
     )
+    context_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Context Manager 分段和压缩元数据",
+    )
     tool_calls: list[TraceToolCall] = Field(
         default_factory=list,
         description="executor 阶段使用的工具调用摘要",
