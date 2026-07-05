@@ -14,6 +14,12 @@ import time
 from dataclasses import replace
 from typing import Any
 
+from app.agent.final_report import (
+    build_fallback_report,
+    build_unstructured_llm_report,
+    parse_final_report,
+    render_final_report,
+)
 from app.core.llm import (
     LLMClient,
     LLMClientError,
@@ -26,7 +32,6 @@ from app.core.llm import (
 from app.core.models import Plan, RouterResult, ToolCallRecord
 from app.core.prompt import (
     ANSWER_SYSTEM_PROMPT,
-    FALLBACK_PROMPT_VERSION,
     SYNTHESIZER_PROMPT_VERSION,
     build_answer_user_prompt,
 )
@@ -107,6 +112,16 @@ class AnswerSynthesizer:
         grounding_status = _rag_grounding_status(result_records)
         if grounding_status == "insufficient_evidence":
             answer = self._append_incident_memory_reference(INSUFFICIENT_EVIDENCE_ANSWER, context_package)
+            report = build_fallback_report(answer, result_records, confidence=0.1)
+            usage = zero_usage(self.llm_client.settings, source="grounding_guard").model_dump()
+            provider_metadata = self._provider_metadata(
+                llm_enabled=bool(use_llm and self.llm_client.is_enabled()),
+                fallback_used=True,
+                schema_valid=True,
+                generation_latency_ms=int(usage.get("latency_ms", 0) or 0),
+                provider_error_code="insufficient_evidence",
+                provider_error_message="insufficient_evidence",
+            )
             return {
                 "answer": answer,
                 "answer_source": "fallback",
@@ -115,10 +130,12 @@ class AnswerSynthesizer:
                 "prompt_name": SYNTHESIZER_PROMPT_NAME,
                 "model": self.llm_client.settings.model,
                 "raw_llm_output": "",
-                "parsed_output": None,
+                "parsed_output": report.model_dump(),
                 "error_message": "insufficient_evidence",
-                "prompt_version": FALLBACK_PROMPT_VERSION,
-                "llm_usage": zero_usage(self.llm_client.settings, source="grounding_guard").model_dump(),
+                "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+                "llm_usage": usage,
+                "schema_valid": True,
+                "provider_metadata": provider_metadata,
             }
 
         fallback_answer = self.fallback_synthesizer.synthesize(
@@ -130,6 +147,16 @@ class AnswerSynthesizer:
         fallback_answer = self._append_incident_memory_reference(fallback_answer, context_package)
 
         if not use_llm or not self.llm_client.is_enabled():
+            report = build_fallback_report(fallback_answer, result_records)
+            usage = zero_usage(self.llm_client.settings, source="llm_disabled").model_dump()
+            provider_metadata = self._provider_metadata(
+                llm_enabled=False,
+                fallback_used=True,
+                schema_valid=True,
+                generation_latency_ms=int(usage.get("latency_ms", 0) or 0),
+                provider_error_code="llm_disabled",
+                provider_error_message="llm_disabled",
+            )
             return {
                 "answer": fallback_answer,
                 "answer_source": "fallback",
@@ -138,10 +165,12 @@ class AnswerSynthesizer:
                 "prompt_name": SYNTHESIZER_PROMPT_NAME,
                 "model": self.llm_client.settings.model,
                 "raw_llm_output": "",
-                "parsed_output": None,
+                "parsed_output": report.model_dump(),
                 "error_message": "llm_disabled",
-                "prompt_version": FALLBACK_PROMPT_VERSION,
-                "llm_usage": zero_usage(self.llm_client.settings, source="llm_disabled").model_dump(),
+                "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+                "llm_usage": usage,
+                "schema_valid": True,
+                "provider_metadata": provider_metadata,
             }
 
         system_prompt = ANSWER_SYSTEM_PROMPT
@@ -158,22 +187,35 @@ class AnswerSynthesizer:
             generation = self.llm_client.generate(system_prompt, user_prompt)
         except Exception as exc:
             llm_latency_ms = int((time.perf_counter() - llm_start) * 1000)
+            error_code = _llm_error_code(exc)
+            report = build_fallback_report(fallback_answer, result_records)
+            usage = zero_usage(
+                self.llm_client.settings,
+                source="fallback",
+                latency_ms=llm_latency_ms,
+            ).model_dump()
+            provider_metadata = self._provider_metadata(
+                llm_enabled=bool(use_llm and self.llm_client.is_enabled()),
+                fallback_used=True,
+                schema_valid=True,
+                generation_latency_ms=llm_latency_ms,
+                provider_error_code=error_code,
+                provider_error_message=error_code,
+            )
             return {
                 "answer": fallback_answer,
                 "answer_source": "fallback",
                 "llm_used": False,
-                "llm_error": _llm_error_code(exc),
+                "llm_error": error_code,
                 "prompt_name": SYNTHESIZER_PROMPT_NAME,
                 "model": self.llm_client.settings.model,
                 "raw_llm_output": "",
-                "parsed_output": None,
-                "error_message": _llm_error_code(exc),
-                "prompt_version": FALLBACK_PROMPT_VERSION,
-                "llm_usage": zero_usage(
-                    self.llm_client.settings,
-                    source="fallback",
-                    latency_ms=llm_latency_ms,
-                ).model_dump(),
+                "parsed_output": report.model_dump(),
+                "error_message": error_code,
+                "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+                "llm_usage": usage,
+                "schema_valid": True,
+                "provider_metadata": provider_metadata,
             }
 
         llm_latency_ms = int((time.perf_counter() - llm_start) * 1000)
@@ -192,8 +234,27 @@ class AnswerSynthesizer:
                 latency_ms=llm_latency_ms,
             )
 
+        report, schema_error = parse_final_report(answer)
+        schema_valid = report is not None
+        if report is not None:
+            final_answer = render_final_report(report)
+            parsed_output = report.model_dump()
+            provider_error_code = ""
+        else:
+            final_answer = answer
+            parsed_output = build_unstructured_llm_report(answer, result_records).model_dump()
+            provider_error_code = schema_error
+
+        provider_metadata = self._provider_metadata(
+            llm_enabled=True,
+            fallback_used=False,
+            schema_valid=schema_valid,
+            generation_latency_ms=llm_latency_ms,
+            provider_error_code=provider_error_code,
+            provider_error_message=provider_error_code,
+        )
         return {
-            "answer": answer,
+            "answer": final_answer,
             "answer_source": "llm",
             "llm_used": True,
             "llm_error": None,
@@ -201,9 +262,33 @@ class AnswerSynthesizer:
             "prompt_version": SYNTHESIZER_PROMPT_VERSION,
             "model": self.llm_client.settings.model,
             "raw_llm_output": raw_output,
-            "parsed_output": None,
-            "error_message": "",
+            "parsed_output": parsed_output,
+            "error_message": provider_error_code,
             "llm_usage": usage.model_dump(),
+            "schema_valid": schema_valid,
+            "provider_metadata": provider_metadata,
+        }
+
+    def _provider_metadata(
+        self,
+        *,
+        llm_enabled: bool,
+        fallback_used: bool,
+        schema_valid: bool,
+        generation_latency_ms: int,
+        provider_error_code: str = "",
+        provider_error_message: str = "",
+    ) -> dict[str, Any]:
+        return {
+            "prompt_version": SYNTHESIZER_PROMPT_VERSION,
+            "model_provider": self.llm_client.settings.provider,
+            "model_name": self.llm_client.settings.model,
+            "llm_enabled": llm_enabled,
+            "fallback_used": fallback_used,
+            "schema_valid": schema_valid,
+            "generation_latency_ms": max(0, generation_latency_ms),
+            "provider_error_code": provider_error_code,
+            "provider_error_message": provider_error_message,
         }
 
     def _append_incident_memory_reference(

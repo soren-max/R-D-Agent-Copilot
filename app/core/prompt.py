@@ -57,17 +57,11 @@ def build_answer_user_prompt(
             "trace 摘要": trace_summary,
         }
     return (
-        "请基于以下执行结果生成中文最终回答。\n\n"
-        "复杂排障回答结构：\n"
-        "1. 初步判断\n"
-        "2. 工具证据\n"
-        "3. 知识库补充\n"
-        "4. 建议处理方式\n"
-        "5. 不确定性说明\n\n"
-        "简单问答回答结构：\n"
-        "1. 简要解释\n"
-        "2. 知识来源\n"
-        "3. 补充说明\n\n"
+        "请基于以下执行结果生成中文最终报告，并只输出合法 JSON。\n\n"
+        "JSON schema 字段必须包含：summary、root_cause、evidence、fix_steps、confidence、risks。\n"
+        "evidence 只能引用 tool_evidence 或 RAG evidence；incident_memory 只能写入 risks 或历史参考限制，"
+        "不能作为当前根因证据。\n"
+        "如果证据不足，root_cause 必须写不确定或当前证据不足。\n\n"
         "Incident Memory 仅是历史参考，不是当前证据；如果当前 tool_results 或 RAG evidence 不支持，"
         "不得直接把历史 root_cause 当作本次最终根因。\n\n"
         f"{json.dumps(payload, ensure_ascii=False, default=str)}"
