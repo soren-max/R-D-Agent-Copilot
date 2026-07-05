@@ -43,6 +43,7 @@ R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持�
 - Run / Trace Persistence：使用 SQLite 持久化历史 run、step 和 tool call，支持链路回查。
 - Evaluation v1：基于工具成功率、Trace 完整性、RAG 命中、回答证据性和耗时给出质量评分。
 - RAG Pipeline：支持本地 Markdown 入库、结构化 chunk metadata、确定性向量检索、keyword fallback、hybrid retrieval、召回评估和 grounding guard。
+- RAG Pipeline v2：支持按 `doc_type` 的 layered chunking、cleaning / dedup、keyword rerank，以及 precision / recall evaluation。
 - RAG Grounding v0.3.0：新增 `apps/api/app/kb` 本地排障知识库、关键词检索、evidence 构造和 grounded answer trace。
 - Agent Safety v0.6.0：提供 prompt injection 检测、恶意 KB 指令过滤和 Tool allowlist / denylist。
 - Deployment & Observability v0.7.0：提供 `/health`、配置检查、trace export 和本地 eval report 查询。
@@ -221,7 +222,9 @@ DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，
 
 ## RAG Pipeline
 
-RAG 只读取 `data/docs/*.md`，通过 Markdown 标题、段落和代码块边界生成 chunk，并为每个 chunk 保留 `source`、`title`、`section`、`chunk_id`、`doc_type` 和 `updated_at` metadata。检索层提供 deterministic local vector search、keyword fallback 和 hybrid retrieval，不调用外部向量库、embedding 服务或企业 API。
+RAG 读取 `data/docs` 下的本地知识文件，默认样例以 Markdown 为主；v2 也支持 normal/config/log/code 文件类型。系统通过文档结构、段落、行窗口和代码符号边界生成 chunk，并为每个 chunk 保留 `source`、`title`、`section`、`chunk_id`、`doc_type`、`line_range`、`content_hash` 和 `updated_at` metadata。检索层提供 deterministic local vector search、keyword fallback 和 hybrid retrieval，不调用外部向量库、embedding 服务或企业 API。
+
+RAG Pipeline v2 在此基础上增加面向研发排障的分层处理：按 `normal_doc`、`markdown_doc`、`config_file`、`log_file`、`code_file` 识别文档类型；对 runbook/Markdown 使用较大 chunk，对日志、配置和代码使用更细粒度 chunk；清洗空行、重复模板和明显乱码，同时保留错误码、异常、配置 key/value、函数名和类名等证据。检索仍先走本地向量召回，再用 keyword overlap、error code、service name、source/title 和 doc_type priority 做规则重排，并在 Evaluation v2 中记录 `precision_at_k`、`recall_at_k`、`source_coverage`、`rerank_applied` 和 `dedup_count`。
 
 v0.3.0 额外提供一条更简单、更容易审计的本地关键词 RAG 链路，位于：
 

@@ -251,6 +251,13 @@ class TraceStep(BaseModel):
         default_factory=list,
         description="v0.4.0 reranker 输出",
     )
+    precision_at_k: float | None = Field(default=None, description="RAG v2 precision@k")
+    recall_at_k: float | None = Field(default=None, description="RAG v2 recall@k")
+    rag_source_coverage: float | None = Field(default=None, description="RAG v2 source coverage")
+    rag_missing_source_count: int | None = Field(default=None, description="RAG v2 missing source/title count")
+    grounded_answer_rate: float | None = Field(default=None, description="RAG v2 grounded answer rate")
+    rerank_applied: bool | None = Field(default=None, description="RAG v2 rule rerank applied")
+    dedup_count: int | None = Field(default=None, description="RAG v2 deduplicated chunk count")
     no_evidence_reason: str = Field(
         default="",
         description="v0.3.0 无证据原因",

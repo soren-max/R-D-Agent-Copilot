@@ -39,6 +39,8 @@ class RetrievalHit:
     chunk: RagChunk
     score: float
     retrieval_type: str
+    rerank_score: float = 0.0
+    match_reason: str = ""
 
     def to_document(self) -> dict[str, Any]:
         metadata = self.chunk.metadata
@@ -51,7 +53,11 @@ class RetrievalHit:
             "chunk_id": metadata["chunk_id"],
             "doc_type": metadata["doc_type"],
             "updated_at": metadata["updated_at"],
+            "line_range": metadata["line_range"],
+            "content_hash": metadata["content_hash"],
             "retrieval_type": self.retrieval_type,
+            "rerank_score": round(self.rerank_score, 4),
+            "match_reason": self.match_reason,
         }
 
 
