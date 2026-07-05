@@ -31,8 +31,8 @@ R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持�
 
 ## Core Features
 
-- Router：v0.2.0 支持 Prompt Engineering + JSON intent 输出，并保留 rule-based fallback。
-- Planner：v0.2.0 支持结构化 JSON plan 输出，并保留确定性 fallback。
+- Router：只使用 rule-based / deterministic 逻辑做意图分类，不调用 LLM。
+- Planner：只使用 deterministic plan template 和工具白名单生成执行计划，不调用 LLM。
 - LangGraph Executor：在 Executor 内部编排工具节点，支持条件执行、retry、fallback 和节点 trace。
 - Tools：提供 `log_tool`、`config_tool`、`git_tool` 和本地 `rag_retriever`。
 - Mock API Server：提供 `/mock/logs`、`/mock/configs`、`/mock/git/commits`，模拟日志平台、配置中心和 Git 平台。
@@ -49,7 +49,7 @@ R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持�
 - Deployment & Observability v0.7.0：提供 `/health`、配置检查、trace export 和本地 eval report 查询。
 - Advanced RAG v0.8.0：提供可选 OpenAI-compatible embedding / rerank provider，并保留本地 deterministic fallback。
 - Evidence Chain：将 log/config/git/rag/evaluation 输出整理为证据项、根因候选和 rule-based 置信度。
-- Prompt Versioning：Router、Planner、Answer Synthesizer 记录 `prompt_name`、`prompt_version`、`model`、`raw_llm_output`、`parsed_output` 和错误信息到 Trace，支持策略回溯。
+- Prompt / Provider Governance：LLM provider 只接入 Answer Synthesizer，并记录 `prompt_name`、`prompt_version`、`model`、`raw_llm_output`、`parsed_output` 和错误信息到 Trace，支持策略回溯。
 - Production Readiness：提供结构化日志、`request_id` 透传、统一异常返回、可选统一响应体、Docker Compose 一键部署和 release checklist。
 - Docker + CI：提供 Docker Compose 本地全栈启动和 GitHub Actions CI。
 
@@ -156,7 +156,7 @@ LLM_PROVIDER=mock
 LLM_MODEL=mock-json-model
 ```
 
-mock provider 不访问网络，适合 Router / Planner 的 prompt JSON 调试和单元测试。
+mock provider 不访问网络，仅用于 Answer Synthesizer 和 provider governance 的本地单元测试；Router / Planner 不读取该 provider。
 
 RAG provider 默认完全本地运行，不需要外部服务：
 
@@ -184,16 +184,17 @@ RAG_PROVIDER_TIMEOUT_SECONDS=10
 
 如果 provider 未配置 key、SDK 不可用、超时或返回异常，Retriever 会自动回退到本地 hash embedding / overlap reranker，并在 trace 中记录 `embedding_fallback_used`、`rerank_fallback_used` 和对应原因。不要提交 `.env` 或真实 API Key。
 
-## v0.2.0 Prompt Engineering
+## Deterministic Control Plane
 
-本轮改造把 Chapter 2「提示学习与思维链」落到工程边界内：
+Router、Planner 和 Tool Selection 是控制面，必须保持 deterministic：
 
-- `app/prompts/router_prompt.txt` 约束 Router 只输出 intent/confidence/reason JSON。
-- `app/prompts/planner_prompt.txt` 约束 Planner 只输出 task_type/steps JSON，并且工具只能来自白名单。
+- Router 只根据规则和关键词评分输出 `simple_qa` / `complex_troubleshooting` 及细分 intent。
+- Planner 只根据 Router 输出生成固定模板 plan，并且工具只能来自 `log_tool`、`config_tool`、`git_tool`、`rag_retriever` 白名单。
+- Tool Selection 由 Planner 的 deterministic plan 和 Tool Gateway allowlist 共同约束，LLM 不能新增工具、改写步骤或绕过 Executor。
 - `app/prompts/answer_synthesizer_prompt.txt` 约束最终回答只能基于 Tools 和 RAG evidence，证据不足时必须说明当前证据不足。
 - `app/prompts/log_analysis_prompt.txt`、`config_diff_prompt.txt`、`git_change_prompt.txt` 为后续工具内证据分析预留领域 prompt。
 
-LLM 在 Router/Planner 中只是可选结构化生成层；当 LLM 不可用、JSON 解析失败、超时、置信度过低或工具越权时，系统会回到现有 rule-based / deterministic fallback。
+即使 `LLM_ENABLED=true`，Router、Planner 和工具选择也不会调用 provider。LLM 只允许在 Answer Synthesizer 阶段基于既有 evidence 生成最终中文报告；provider 不可用、超时或 schema 校验失败时自动回退到本地 fallback。
 
 新增 provider 目录：
 
@@ -208,9 +209,9 @@ app/llms/
 
 ## DeepSeek Answer Synthesizer
 
-DeepSeek API 当前只用于最终回答生成；v0.2.0 额外提供 OpenAI-compatible provider 能力，用于受控的结构化 Router / Planner JSON 生成和 Answer Synthesizer。
+DeepSeek API 当前只用于最终回答生成；OpenAI-compatible provider 能力只接入 Answer Synthesizer，不接入 Router、Planner 或 Tool Selection。
 
-DeepSeek API 当前通过 OpenAI-compatible provider 接入。Router 和 Planner 可在 `LLM_ENABLED=true` 时尝试结构化 JSON 输出，但 Tool Selection 仍被 Planner 解析器和工具白名单约束；LangGraph 工具编排仍在 Executor 内部执行。Answer Synthesizer 只能基于已有工具结果、RAG 文档和 trace 摘要组织中文排障报告。
+DeepSeek API 当前通过 OpenAI-compatible provider 接入。Router 和 Planner 始终 deterministic；LangGraph 工具编排仍在 Executor 内部执行。Answer Synthesizer 只能基于已有工具结果、RAG 文档和 trace 摘要组织中文排障报告。
 
 DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，系统会自动使用 fallback answer，并在响应和 trace 中记录 `answer_source=fallback`、`llm_used=false` 和对应错误信息。
 
