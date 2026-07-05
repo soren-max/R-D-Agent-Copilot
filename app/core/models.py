@@ -291,6 +291,12 @@ class TraceStep(BaseModel):
     filtered_kb_sources: list[str] = Field(default_factory=list, description="v0.6.0 filtered KB sources")
     memory_created: bool | None = Field(default=None, description="Incident Memory 是否写入")
     memory_id: str = Field(default="", description="Incident Memory ID")
+    checkpoint_created: bool | None = Field(default=None, description="Checkpoint 是否写入")
+    checkpoint_status: str = Field(default="", description="Checkpoint 状态")
+    resume_from_run_id: str = Field(default="", description="Resume 来源 run id")
+    resumed_completed_steps_count: int | None = Field(default=None, description="Resume 后已完成 step 数")
+    resumed_pending_steps_count: int | None = Field(default=None, description="Resume 后待执行 step 数")
+    resume_reason: str = Field(default="", description="Resume 原因")
 
 
 class TraceData(BaseModel):

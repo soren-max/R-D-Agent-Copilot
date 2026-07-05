@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.eval import RuleBasedEvaluator
 from app.persistence.repositories import RunRepository
+from app.resume import CheckpointStore, ResumeService
 
 router = APIRouter(tags=["runs"])
 
@@ -21,6 +22,22 @@ def list_runs(limit: int = Query(default=20, description="返回最近 runs 数�
     safe_limit = max(1, min(limit, 100))
     runs = RunRepository().list_runs(limit=safe_limit)
     return {"runs": [_format_run(run) for run in runs]}
+
+
+@router.get("/runs/{run_id}/checkpoint")
+def get_run_checkpoint(run_id: str) -> dict[str, Any]:
+    checkpoint = CheckpointStore().get(run_id)
+    if checkpoint is None:
+        raise HTTPException(status_code=404, detail="checkpoint_not_found")
+    return {"checkpoint": checkpoint.model_dump()}
+
+
+@router.post("/runs/{run_id}/continue")
+def continue_run(run_id: str) -> dict[str, Any]:
+    result = ResumeService().resume_by_run_id(run_id)
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail="checkpoint_not_found")
+    return result
 
 
 @router.get("/runs/{run_id}")
