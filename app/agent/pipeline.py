@@ -13,6 +13,7 @@ from app.agent.router import IntentRouter
 from app.agent.synthesizer import AnswerSynthesizer
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
+from apps.api.app.context import ContextManager
 from apps.api.app.rag.grounding_checker import GroundingChecker
 from apps.api.app.safety.prompt_injection import detect_prompt_injection
 from apps.api.app.safety.tool_policy import validate_plan_tools
@@ -129,6 +130,13 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     # ── 4. Synthesizer ──
     tracer.start_stage("synthesizer")
     trace_summary = tracer.snapshot().model_dump()
+    context_package = ContextManager().build(
+        query=request.query,
+        route=route_result.model_dump(),
+        plan=plan.model_dump(),
+        tool_results=[result.model_dump() for result in tool_results],
+        trace_summary=trace_summary,
+    )
     synthesizer = AnswerSynthesizer()
     synthesis = synthesizer.synthesize(
         request.query,
@@ -136,6 +144,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         plan,
         tool_results,
         trace_summary=trace_summary,
+        context_package=context_package,
     )
     answer = synthesis.get("answer", "")
     llm_usage = synthesis.get("llm_usage", _DEFAULT_LLM_USAGE)
@@ -150,6 +159,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         parsed_output=synthesis.get("parsed_output"),
         error_message=synthesis.get("error_message", ""),
         llm_usage=llm_usage,
+        context_metadata=context_package.metadata.model_dump(),
     )
 
     rag_evidence = next(

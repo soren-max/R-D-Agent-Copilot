@@ -45,6 +45,7 @@ class Tracer:
         parsed_output: dict[str, Any] | None = None,
         error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
+        context_metadata: dict[str, Any] | None = None,
         rag_metadata: dict[str, Any] | None = None,
         grounded_claims: list[dict[str, Any]] | None = None,
         unsupported_claims: list[dict[str, Any]] | None = None,
@@ -72,6 +73,7 @@ class Tracer:
             parsed_output=parsed_output,
             error_message=error_message,
             llm_usage=llm_usage,
+            context_metadata=context_metadata or {},
             tool_calls=tool_calls or [],
             skipped_nodes=skipped_nodes or [],
             fallback_used=fallback_used,
@@ -189,6 +191,7 @@ class Tracer:
         parsed_output: dict[str, Any] | None = None,
         error_message: str = "",
         llm_usage: dict[str, Any] | None = None,
+        context_metadata: dict[str, Any] | None = None,
     ) -> None:
         """记录 synthesizer 阶段的 LLM 使用情况。"""
         self.end_stage(
@@ -204,6 +207,7 @@ class Tracer:
             parsed_output=parsed_output,
             error_message=error_message,
             llm_usage=llm_usage,
+            context_metadata=context_metadata,
         )
 
     def end_grounding_checker_stage(self, grounding_check: dict[str, Any]) -> None:

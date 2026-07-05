@@ -33,14 +33,28 @@ def build_answer_user_prompt(
     plan: dict[str, Any],
     tool_results: list[dict[str, Any]],
     trace_summary: dict[str, Any],
+    context_package: Any | None = None,
 ) -> str:
-    payload = {
-        "用户原始问题": query,
-        "Router 输出": route,
-        "Planner steps": plan.get("steps", []),
-        "tool_results": tool_results,
-        "trace 摘要": trace_summary,
-    }
+    if context_package is not None:
+        context_payload = context_package.as_prompt_payload()
+        payload = {
+            "ContextPackage": context_payload,
+            "ContextMetadata": context_package.metadata.model_dump(),
+            "用户原始问题": context_payload.get("current_query", query),
+            "Router 输出": route,
+            "Planner steps": plan.get("steps", []),
+            "tool_results": context_payload.get("tool_evidence", tool_results),
+            "RAG evidence": context_payload.get("rag_evidence", []),
+            "trace 摘要": context_payload.get("run_history", trace_summary),
+        }
+    else:
+        payload = {
+            "用户原始问题": query,
+            "Router 输出": route,
+            "Planner steps": plan.get("steps", []),
+            "tool_results": tool_results,
+            "trace 摘要": trace_summary,
+        }
     return (
         "请基于以下执行结果生成中文最终回答。\n\n"
         "复杂排障回答结构：\n"

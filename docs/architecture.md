@@ -60,8 +60,14 @@ RAG：
 DeepSeek：
 只用于 Answer Synthesizer，不控制 Router / Planner / Tool Selection。它只能基于已有工具结果、RAG 文档和 trace 摘要组织中文回答。
 
+Context Manager：
+位于 Executor/Trace 和 Answer Synthesizer 之间，负责把最终回答所需信息组织成分层 `ContextPackage`，而不是把所有 prompt、evidence、history 直接拼接给 Answer Synthesizer。`ContextPackage` 包含 `system_prefix`、`current_query`、`route_plan`、`tool_evidence`、`rag_evidence` 和 `run_history`。其中 `current_query` 永不裁剪；`tool_evidence`、`rag_evidence`、`run_history` 按字符预算做确定性压缩。Context Manager 不调用 LLM、不选择工具、不改变 Planner 输出、不执行工具。
+
 Trace：
 记录全链路可观测信息，包括 trace id、stage 输出、latency、LangGraph tool calls、skipped nodes、fallback 状态、prompt_version 和 synthesizer 元数据。
+
+Context Metadata：
+每次构建 `ContextPackage` 都会记录 `total_chars_before`、`total_chars_after`、`compression_ratio`、`section_char_counts` 和 `reduced_sections`，并写入 synthesizer trace step，供 Trace Viewer 和历史 run 回看。
 
 Prompt Versioning：
 Answer Synthesizer 的 DeepSeek prompt 与 fallback prompt 使用显式版本号管理，当前为 `synthesizer_prompt_v1` 和 `fallback_prompt_v1`。每次请求都会在 synthesizer trace step 中记录 `prompt_version`，历史 Run 回放可据此还原回答生成策略。

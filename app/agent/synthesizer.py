@@ -29,6 +29,7 @@ from app.core.prompt import (
     SYNTHESIZER_PROMPT_VERSION,
     build_answer_user_prompt,
 )
+from apps.api.app.context.sections import ContextPackage
 
 SYNTHESIZER_PROMPT_NAME = "answer_synthesizer_prompt"
 
@@ -97,6 +98,7 @@ class AnswerSynthesizer:
         tool_results: list[ToolCallRecord] | list[dict[str, Any]],
         use_llm: bool = True,
         trace_summary: dict[str, Any] | None = None,
+        context_package: ContextPackage | None = None,
     ) -> dict[str, Any]:
         route_result = route if isinstance(route, RouterResult) else RouterResult(**route)
         plan_result = plan if isinstance(plan, Plan) else Plan(**plan)
@@ -146,6 +148,7 @@ class AnswerSynthesizer:
             plan=_to_dict(plan),
             tool_results=_tool_results_to_dicts(tool_results),
             trace_summary=trace_summary or {},
+            context_package=context_package,
         )
         llm_start = time.perf_counter()
         try:
