@@ -13,13 +13,18 @@ from app.api.mock import router as mock_router
 from app.api.ops import router as ops_router
 from app.api.runs import router as runs_router
 from app.api.stream import router as stream_router
+from app.core.logging import configure_logging
 from app.core.rate_limit import rate_limit_middleware
+from app.core.responses import register_exception_handlers, request_context_middleware
+
+configure_logging()
 
 app = FastAPI(
     title="R&D Agent Copilot",
     version="0.8.0",
     description="AI 研发排障智能助手 — Agent Pipeline with RAG, Safety, and Observability",
 )
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.middleware("http")(request_context_middleware)
 app.middleware("http")(rate_limit_middleware)
 
 app.include_router(chat_router)

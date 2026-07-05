@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 
+from app.core.logging import log_event
 from app.memory.incident_memory import IncidentMemory
 from app.memory.retrieval import MemoryRetrievalResult, retrieve_incident_memories
 
@@ -30,6 +31,7 @@ class MemoryStore:
         else:
             memories[existing_index] = memory
         self._write(memories)
+        log_event(event="incident_memory_saved", stage="incident_memory", message=memory.memory_id)
         return memory
 
     def list(self) -> list[IncidentMemory]:
@@ -50,7 +52,9 @@ class MemoryStore:
         service: str | None = None,
         limit: int = 3,
     ) -> list[MemoryRetrievalResult]:
-        return retrieve_incident_memories(self.list(), query=query, service=service, limit=limit)
+        results = retrieve_incident_memories(self.list(), query=query, service=service, limit=limit)
+        log_event(event="incident_memory_retrieved", stage="incident_memory", message=f"hits={len(results)}")
+        return results
 
     def _write(self, memories: list[IncidentMemory]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

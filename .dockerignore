@@ -21,4 +21,9 @@ apps/web/out/
 *.tsbuildinfo
 
 data/runs.db
+data/reports/
+data/memory/
+artifacts/
+.coverage
+htmlcov/
 *.db-journal

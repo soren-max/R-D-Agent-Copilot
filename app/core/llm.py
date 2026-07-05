@@ -8,6 +8,7 @@ from dataclasses import dataclass, field, replace
 from typing import Callable
 
 from app.core.config import LLMSettings, get_llm_settings
+from app.core.logging import log_event
 
 try:
     from openai import OpenAI
@@ -266,6 +267,12 @@ class LLMClient:
 
     def generate(self, system_prompt: str, user_prompt: str) -> LLMGeneration:
         if not self.settings.enabled:
+            log_event(
+                event="provider_skipped",
+                stage="provider",
+                error_code="llm_disabled",
+                message="LLM disabled",
+            )
             raise LLMDisabledError("LLM is disabled. Set LLM_ENABLED=true to enable it.")
         prompt_tokens_estimate = estimate_tokens(system_prompt) + estimate_tokens(user_prompt)
         if self.settings.daily_token_limit and daily_token_usage() + prompt_tokens_estimate > self.settings.daily_token_limit:
@@ -273,6 +280,13 @@ class LLMClient:
                 provider_status="degraded",
                 daily_token_limit_exceeded=True,
                 prompt_tokens=prompt_tokens_estimate,
+            )
+            log_event(
+                event="provider_token_limit_exceeded",
+                stage="provider",
+                level="WARNING",
+                error_code="daily_token_limit_exceeded",
+                message="Daily token limit exceeded",
             )
             raise DailyTokenLimitExceededError("daily_token_limit_exceeded", metadata=metadata)
 
@@ -290,6 +304,11 @@ class LLMClient:
         fallback = self._fallback_runtime()
         errors: list[Exception] = []
         for runtime in [primary, *([fallback] if fallback else [])]:
+            log_event(
+                event="provider_attempt_started",
+                stage="provider",
+                message=f"{runtime.provider}:{runtime.model}:{runtime.role}",
+            )
             if not runtime.api_key:
                 error = MissingAPIKeyError(
                     "DEEPSEEK_API_KEY is required when LLM is enabled."
@@ -337,6 +356,13 @@ class LLMClient:
                 circuit_open=True,
                 provider_error_code="circuit_open",
             )
+            log_event(
+                event="provider_circuit_open",
+                stage="provider",
+                level="WARNING",
+                error_code="circuit_open",
+                message=runtime.provider,
+            )
             raise LLMCircuitOpenError("circuit_open", metadata=metadata)
 
         attempts = self.settings.retry_count + 1
@@ -368,6 +394,13 @@ class LLMClient:
                     total_tokens=usage.total_tokens,
                     daily_token_usage=daily_total,
                 )
+                log_event(
+                    event="provider_completed",
+                    stage="provider",
+                    latency_ms=usage.latency_ms,
+                    message=f"{runtime.provider}:{runtime.model}",
+                    total_tokens=usage.total_tokens,
+                )
                 return LLMGeneration(content=content, usage=usage, provider_metadata=metadata)
             except Exception as exc:
                 last_error = exc
@@ -383,6 +416,13 @@ class LLMClient:
                     circuit_open=circuit_open,
                     retry_count=attempt,
                     provider_error_code=exc.__class__.__name__,
+                )
+                log_event(
+                    event="provider_failed",
+                    stage="provider",
+                    level="ERROR",
+                    error_code=exc.__class__.__name__,
+                    message=f"{runtime.provider}:{runtime.model}",
                 )
                 raise LLMClientError(exc.__class__.__name__, metadata=metadata) from exc
         raise LLMClientError((last_error or Exception("provider_unavailable")).__class__.__name__)

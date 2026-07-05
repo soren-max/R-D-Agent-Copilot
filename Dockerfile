@@ -12,7 +12,9 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY apps ./apps
 COPY data ./data
+COPY eval ./eval
 COPY main.py .
 
 RUN mkdir -p /app/data

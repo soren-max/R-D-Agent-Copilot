@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
+from app.core.logging import log_event
 from app.memory.memory_store import MemoryStore
 from apps.api.app.context.reducers import (
     reduce_rag_evidence,
@@ -59,6 +61,7 @@ class ContextManager:
         tool_results: list[dict[str, Any]] | None = None,
         trace_summary: dict[str, Any] | None = None,
     ) -> ContextPackage:
+        start = time.perf_counter()
         tool_results = tool_results or []
         trace_summary = trace_summary or {}
 
@@ -81,7 +84,15 @@ class ContextManager:
             self._section("run_history", raw_history, run_history, history_reduced),
         ]
         sections = self._apply_total_budget(sections)
-        return ContextPackage(sections=sections, metadata=self._metadata(sections))
+        package = ContextPackage(sections=sections, metadata=self._metadata(sections))
+        log_event(
+            event="context_manager_completed",
+            stage="context_manager",
+            latency_ms=int((time.perf_counter() - start) * 1000),
+            message="Context package completed",
+            total_chars_after=package.metadata.total_chars_after,
+        )
+        return package
 
     def _section(self, name: str, before: str, after: str, reduced: bool = False) -> ContextSection:
         return ContextSection(
@@ -126,6 +137,11 @@ class ContextManager:
     def _build_incident_memory(self, query: str) -> tuple[str, str, bool]:
         service = self._infer_service_from_query(query)
         results = self.memory_store.query_by_service_or_symptom(query=query, service=service, limit=3)
+        log_event(
+            event="incident_memory_queried",
+            stage="incident_memory",
+            message=f"hits={len(results)}",
+        )
         payload = [
             {
                 **result.to_context_dict(),
