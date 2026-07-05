@@ -230,16 +230,23 @@ class _RAGRetrieverTool:
                     "title": chunk["title"],
                     "section": chunk["title"],
                     "chunk_id": chunk["chunk_id"],
+                    "doc_type": chunk.get("doc_type", "markdown_doc"),
+                    "line_range": chunk.get("line_range", [1, 1]),
+                    "content_hash": chunk.get("content_hash", ""),
                     "score": chunk.get("score", 0.0),
+                    "rerank_score": chunk.get("rerank_score", 0.0),
+                    "match_reason": chunk.get("match_reason", ""),
                     "retrieval_type": "keyword",
                 }
                 for chunk in keyword_retrieval["retrieved_chunks"]
             ]
             source = ",".join(dict.fromkeys(str(doc["source"]) for doc in documents))
-        evidence = keyword_retrieval["evidence"] or [
+        evidence = [
             {
                 "source": doc.get("source", ""),
+                "title": doc.get("title", ""),
                 "chunk_id": doc.get("chunk_id", ""),
+                "line_range": doc.get("line_range", []),
                 "content_excerpt": str(doc.get("content", ""))[:260],
                 "score": doc.get("score", 0.0),
             }
@@ -252,6 +259,11 @@ class _RAGRetrieverTool:
                 "title": doc.get("title", ""),
                 "content": doc.get("content", ""),
                 "keywords": [],
+                "doc_type": doc.get("doc_type", ""),
+                "line_range": doc.get("line_range", []),
+                "content_hash": doc.get("content_hash", ""),
+                "rerank_score": doc.get("rerank_score", 0.0),
+                "match_reason": doc.get("match_reason", ""),
                 "score": doc.get("score", 0.0),
                 "retrieval_type": doc.get("retrieval_type", "hybrid"),
             }
@@ -272,6 +284,13 @@ class _RAGRetrieverTool:
             "vector_hit_count": keyword_retrieval.get("vector_hit_count", 0),
             "fallback_used": retrieval.get("fallback_used", False),
             "vector_available": retrieval.get("vector_available", False),
+            "rerank_applied": retrieval.get("rerank_applied", bool(keyword_retrieval.get("rerank_results"))),
+            "dedup_count": retrieval.get("dedup_count", 0),
+            "recall_at_k": retrieval.get("recall_at_k", 1.0 if documents else 0.0),
+            "precision_at_k": retrieval.get("precision_at_k", round(len(documents) / 5, 4) if documents else 0.0),
+            "source_coverage": retrieval.get("source_coverage", 0.0),
+            "missing_source_count": retrieval.get("missing_source_count", 0),
+            "grounded_answer_rate": retrieval.get("grounded_answer_rate", 1.0 if documents else 0.0),
             "embedding_provider": keyword_retrieval.get("embedding_provider", "local"),
             "embedding_model": keyword_retrieval.get("embedding_model", ""),
             "embedding_fallback_used": keyword_retrieval.get("embedding_fallback_used", False),
@@ -281,7 +300,7 @@ class _RAGRetrieverTool:
             "rerank_fallback_used": keyword_retrieval.get("rerank_fallback_used", False),
             "rerank_fallback_reason": keyword_retrieval.get("rerank_fallback_reason", ""),
             "retrieved_chunks": retrieved_chunks,
-            "rerank_results": keyword_retrieval.get("rerank_results", []),
+            "rerank_results": retrieval.get("rerank_results") or keyword_retrieval.get("rerank_results", []),
             "evidence": evidence,
         }
 

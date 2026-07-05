@@ -63,6 +63,11 @@ class RagMetricsV2(BaseModel):
     source_coverage: float = 0.0
     missing_source_count: int = 0
     grounding_score: float = 0.0
+    recall_at_k: float = 0.0
+    precision_at_k: float = 0.0
+    grounded_answer_rate: float = 0.0
+    rerank_applied: bool = False
+    dedup_count: int = 0
 
 
 class MemoryMetricsV2(BaseModel):

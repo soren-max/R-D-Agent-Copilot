@@ -60,13 +60,21 @@ def rag_metrics(tool_results: list[dict[str, Any]], trace: dict[str, Any] | None
     complete = max(0, len(documents) - missing_source_count)
     source_coverage = round(complete / len(documents), 4) if documents else 0.0
     metadata = rag.get("rag_metadata") or {}
+    trace_executor = _stage(trace or {}, "executor")
     grounding_status = metadata.get("grounding_status", "")
     grounding_score = 1.0 if grounding_status == "grounded" and missing_source_count == 0 and documents else source_coverage * 0.7
+    metadata_source_coverage = metadata.get("source_coverage", trace_executor.get("rag_source_coverage"))
+    metadata_missing_source_count = metadata.get("missing_source_count", trace_executor.get("rag_missing_source_count"))
     return RagMetricsV2(
         rag_hit_count=len(documents),
-        source_coverage=source_coverage,
-        missing_source_count=missing_source_count,
+        source_coverage=float(metadata_source_coverage) if metadata_source_coverage is not None else source_coverage,
+        missing_source_count=int(metadata_missing_source_count) if metadata_missing_source_count is not None else missing_source_count,
         grounding_score=round(grounding_score, 4),
+        recall_at_k=float(metadata.get("recall_at_k", trace_executor.get("recall_at_k", 0.0)) or 0.0),
+        precision_at_k=float(metadata.get("precision_at_k", trace_executor.get("precision_at_k", 0.0)) or 0.0),
+        grounded_answer_rate=float(metadata.get("grounded_answer_rate", trace_executor.get("grounded_answer_rate", 0.0)) or 0.0),
+        rerank_applied=bool(metadata.get("rerank_applied", trace_executor.get("rerank_applied", False))),
+        dedup_count=int(metadata.get("dedup_count", trace_executor.get("dedup_count", 0)) or 0),
     )
 
 

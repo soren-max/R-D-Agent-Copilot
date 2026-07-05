@@ -13,7 +13,9 @@ def test_ingestion_generates_chunks_with_metadata():
     assert first.title
     assert first.section
     assert first.chunk_id
-    assert first.doc_type == "markdown"
+    assert first.doc_type == "markdown_doc"
+    assert first.line_range
+    assert first.content_hash
     assert first.updated_at
 
 
