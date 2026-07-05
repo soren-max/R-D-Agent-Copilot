@@ -227,6 +227,7 @@ __marimo__/
 REASONIX.md
 .reasonix/
 data/runs.db
+data/memory/*.json
 .next/
 node_modules/
 tsconfig.tsbuildinfo

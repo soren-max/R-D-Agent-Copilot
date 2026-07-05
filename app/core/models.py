@@ -289,6 +289,8 @@ class TraceStep(BaseModel):
     safety_reasons: list[str] = Field(default_factory=list, description="v0.6.0 safety reasons")
     blocked_tools: list[str] = Field(default_factory=list, description="v0.6.0 blocked tools")
     filtered_kb_sources: list[str] = Field(default_factory=list, description="v0.6.0 filtered KB sources")
+    memory_created: bool | None = Field(default=None, description="Incident Memory 是否写入")
+    memory_id: str = Field(default="", description="Incident Memory ID")
 
 
 class TraceData(BaseModel):

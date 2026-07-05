@@ -52,6 +52,8 @@ class Tracer:
         claim_grounding_score: float | None = None,
         planning_eval: dict[str, Any] | None = None,
         safety: dict[str, Any] | None = None,
+        memory_created: bool | None = None,
+        memory_id: str = "",
     ) -> None:
         """记录某个阶段的结束时间和输出。"""
         start = self._timestamps.pop(stage, None)
@@ -116,6 +118,8 @@ class Tracer:
             safety_reasons=(safety or {}).get("reasons", []),
             blocked_tools=(safety or {}).get("blocked_tools", []),
             filtered_kb_sources=(safety or {}).get("filtered_kb_sources", []),
+            memory_created=memory_created,
+            memory_id=memory_id,
         ))
 
     def end_safety_stage(self, safety: dict[str, Any]) -> None:
@@ -219,6 +223,16 @@ class Tracer:
             grounded_claims=grounding_check.get("grounded_claims", []),
             unsupported_claims=grounding_check.get("unsupported_claims", []),
             claim_grounding_score=grounding_check.get("grounding_score"),
+        )
+
+    def end_memory_stage(self, memory_created: bool, memory_id: str = "", error: str = "") -> None:
+        self.end_stage(
+            "memory",
+            output=f"memory_created={memory_created}",
+            engine="rule_based",
+            error_message=error,
+            memory_created=memory_created,
+            memory_id=memory_id,
         )
 
     def set_final_answer(self, answer: str) -> None:

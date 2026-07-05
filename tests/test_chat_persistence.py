@@ -58,6 +58,7 @@ def test_agent_steps_include_pipeline_stages():
         "grounding_checker",
         "evaluation",
         "evidence",
+        "memory",
     ]
     executor_step = [step for step in run["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"

@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import replace
 from typing import Any
@@ -105,8 +106,9 @@ class AnswerSynthesizer:
         result_records = _tool_results_to_records(tool_results)
         grounding_status = _rag_grounding_status(result_records)
         if grounding_status == "insufficient_evidence":
+            answer = self._append_incident_memory_reference(INSUFFICIENT_EVIDENCE_ANSWER, context_package)
             return {
-                "answer": INSUFFICIENT_EVIDENCE_ANSWER,
+                "answer": answer,
                 "answer_source": "fallback",
                 "llm_used": False,
                 "llm_error": "insufficient_evidence",
@@ -125,6 +127,7 @@ class AnswerSynthesizer:
             plan_result,
             result_records,
         )
+        fallback_answer = self._append_incident_memory_reference(fallback_answer, context_package)
 
         if not use_llm or not self.llm_client.is_enabled():
             return {
@@ -202,6 +205,38 @@ class AnswerSynthesizer:
             "error_message": "",
             "llm_usage": usage.model_dump(),
         }
+
+    def _append_incident_memory_reference(
+        self,
+        answer: str,
+        context_package: ContextPackage | None,
+    ) -> str:
+        if context_package is None:
+            return answer
+        section = context_package.section("incident_memory")
+        if section is None or not section.content or section.content == "[]":
+            return answer
+        try:
+            memories = json.loads(section.content)
+        except json.JSONDecodeError:
+            return answer
+        if not isinstance(memories, list) or not memories:
+            return answer
+        lines = []
+        for memory in memories[:3]:
+            if not isinstance(memory, dict):
+                continue
+            label = memory.get("service") or memory.get("symptom") or memory.get("memory_id", "")
+            cause = memory.get("root_cause", "")
+            freshness = memory.get("freshness_status", "unknown")
+            lines.append(f"- {label}：历史根因参考={cause}（{freshness}，需当前证据支撑）")
+        if not lines:
+            return answer
+        return (
+            f"{answer}\n\n"
+            "【历史参考】以下 Incident Memory 仅作为历史排障参考，不是当前证据，不能单独作为本次根因：\n"
+            + "\n".join(lines)
+        )
 
 
 class Synthesizer:

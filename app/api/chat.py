@@ -14,6 +14,7 @@ from app.agent.pipeline import run_pipeline
 from app.core.models import ChatRequest, ChatResponse, TraceStep
 from app.eval import RuleBasedEvaluator
 from app.evidence import EvidenceChainBuilder
+from app.memory import MemoryStore, build_memory_from_payload
 from app.persistence.chat_persistence import persist_chat_response
 
 router = APIRouter(tags=["chat"])
@@ -110,6 +111,51 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                 evidence_count=0,
             )
         )
+
+    if response.answer_source != "safety_guard":
+        memory_start = time.perf_counter()
+        try:
+            memory = build_memory_from_payload({
+                "query": body.query,
+                "answer": response.answer,
+                "source_run_id": response.trace.trace_id,
+                "tool_results": [result.model_dump() for result in response.tool_results],
+                "evaluation": response.evaluation.model_dump() if response.evaluation else None,
+                "evidence_chain": response.evidence_chain.model_dump() if response.evidence_chain else None,
+            })
+            if memory is None:
+                response.trace.steps.append(
+                    TraceStep(
+                        stage="memory",
+                        engine="rule_based",
+                        output="memory_created=false",
+                        latency_ms=int((time.perf_counter() - memory_start) * 1000),
+                        memory_created=False,
+                    )
+                )
+            else:
+                created = MemoryStore().add(memory)
+                response.trace.steps.append(
+                    TraceStep(
+                        stage="memory",
+                        engine="rule_based",
+                        output="memory_created=true",
+                        latency_ms=int((time.perf_counter() - memory_start) * 1000),
+                        memory_created=True,
+                        memory_id=created.memory_id,
+                    )
+                )
+        except Exception:
+            response.trace.steps.append(
+                TraceStep(
+                    stage="memory",
+                    engine="rule_based",
+                    output="memory_created=false",
+                    latency_ms=int((time.perf_counter() - memory_start) * 1000),
+                    memory_created=False,
+                    error_message="memory_write_failed",
+                )
+            )
 
     try:
         persist_chat_response(body, response)

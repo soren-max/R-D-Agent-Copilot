@@ -93,7 +93,7 @@ def test_chat_api_returns_day1_acceptance_shape():
     assert data["evidence_chain"] is not None
 
     trace_stages = [step["stage"] for step in data["trace"]["steps"]]
-    assert trace_stages == ["safety", "router", "planner", "executor", "synthesizer", "grounding_checker", "evaluation", "evidence"]
+    assert trace_stages == ["safety", "router", "planner", "executor", "synthesizer", "grounding_checker", "evaluation", "evidence", "memory"]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"
     assert executor_step["graph_name"] == "tool_execution_graph"

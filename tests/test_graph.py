@@ -130,6 +130,7 @@ def test_chat_response_behavior_is_unchanged_by_graph_skeleton():
         "grounding_checker",
         "evaluation",
         "evidence",
+        "memory",
     ]
     executor_step = [step for step in data["trace"]["steps"] if step["stage"] == "executor"][0]
     assert executor_step["engine"] == "langgraph"

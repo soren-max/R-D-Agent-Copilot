@@ -135,6 +135,9 @@ def _stage_output_json(trace_step: TraceStep, response: ChatResponse) -> dict[st
         data["overall_confidence"] = trace_step.overall_confidence
         data["evidence_count"] = trace_step.evidence_count
         data["evidence_chain"] = response.evidence_chain.model_dump() if response.evidence_chain else None
+    elif trace_step.stage == "memory":
+        data["memory_created"] = trace_step.memory_created
+        data["memory_id"] = trace_step.memory_id
     return data
 
 

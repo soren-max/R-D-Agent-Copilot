@@ -45,6 +45,7 @@ def build_answer_user_prompt(
             "Planner steps": plan.get("steps", []),
             "tool_results": context_payload.get("tool_evidence", tool_results),
             "RAG evidence": context_payload.get("rag_evidence", []),
+            "Incident Memory 历史参考": context_payload.get("incident_memory", []),
             "trace 摘要": context_payload.get("run_history", trace_summary),
         }
     else:
@@ -67,5 +68,7 @@ def build_answer_user_prompt(
         "1. 简要解释\n"
         "2. 知识来源\n"
         "3. 补充说明\n\n"
+        "Incident Memory 仅是历史参考，不是当前证据；如果当前 tool_results 或 RAG evidence 不支持，"
+        "不得直接把历史 root_cause 当作本次最终根因。\n\n"
         f"{json.dumps(payload, ensure_ascii=False, default=str)}"
     )
