@@ -76,6 +76,9 @@ def _rag_grounding_status(tool_results: list[ToolCallRecord]) -> str:
 
 
 def _llm_error_code(error: Exception) -> str:
+    metadata = getattr(error, "metadata", None)
+    if isinstance(metadata, dict) and metadata.get("provider_error_code"):
+        return str(metadata["provider_error_code"])
     if isinstance(error, LLMDisabledError):
         return "llm_disabled"
     if isinstance(error, MissingAPIKeyError):
@@ -121,6 +124,7 @@ class AnswerSynthesizer:
                 generation_latency_ms=int(usage.get("latency_ms", 0) or 0),
                 provider_error_code="insufficient_evidence",
                 provider_error_message="insufficient_evidence",
+                usage=usage,
             )
             return {
                 "answer": answer,
@@ -156,6 +160,7 @@ class AnswerSynthesizer:
                 generation_latency_ms=int(usage.get("latency_ms", 0) or 0),
                 provider_error_code="llm_disabled",
                 provider_error_message="llm_disabled",
+                usage=usage,
             )
             return {
                 "answer": fallback_answer,
@@ -188,6 +193,7 @@ class AnswerSynthesizer:
         except Exception as exc:
             llm_latency_ms = int((time.perf_counter() - llm_start) * 1000)
             error_code = _llm_error_code(exc)
+            runtime_metadata = getattr(exc, "metadata", {}) if isinstance(getattr(exc, "metadata", {}), dict) else {}
             report = build_fallback_report(fallback_answer, result_records)
             usage = zero_usage(
                 self.llm_client.settings,
@@ -201,6 +207,8 @@ class AnswerSynthesizer:
                 generation_latency_ms=llm_latency_ms,
                 provider_error_code=error_code,
                 provider_error_message=error_code,
+                usage=usage,
+                runtime_metadata=runtime_metadata,
             )
             return {
                 "answer": fallback_answer,
@@ -252,6 +260,8 @@ class AnswerSynthesizer:
             generation_latency_ms=llm_latency_ms,
             provider_error_code=provider_error_code,
             provider_error_message=provider_error_code,
+            usage=usage.model_dump(),
+            runtime_metadata=getattr(generation, "provider_metadata", {}) if isinstance(generation, LLMGeneration) else {},
         )
         return {
             "answer": final_answer,
@@ -278,8 +288,12 @@ class AnswerSynthesizer:
         generation_latency_ms: int,
         provider_error_code: str = "",
         provider_error_message: str = "",
+        usage: dict[str, Any] | None = None,
+        runtime_metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return {
+        usage = usage or {}
+        runtime_metadata = runtime_metadata or {}
+        metadata = {
             "prompt_version": SYNTHESIZER_PROMPT_VERSION,
             "model_provider": self.llm_client.settings.provider,
             "model_name": self.llm_client.settings.model,
@@ -289,7 +303,30 @@ class AnswerSynthesizer:
             "generation_latency_ms": max(0, generation_latency_ms),
             "provider_error_code": provider_error_code,
             "provider_error_message": provider_error_message,
+            "timeout_ms": int(self.llm_client.settings.timeout_seconds * 1000),
+            "retry_count": 0,
+            "provider_status": "healthy" if llm_enabled and not fallback_used and not provider_error_code else "degraded",
+            "fallback_provider_used": False,
+            "circuit_open": False,
+            "prompt_tokens": int(usage.get("prompt_tokens", 0) or 0),
+            "completion_tokens": int(usage.get("completion_tokens", 0) or 0),
+            "total_tokens": int(usage.get("total_tokens", 0) or 0),
+            "generation_cost_estimate": float(
+                usage.get("generation_cost_estimate", usage.get("estimated_cost", 0.0)) or 0.0
+            ),
+            "daily_token_usage": int(usage.get("daily_token_usage", 0) or 0),
+            "daily_token_limit": self.llm_client.settings.daily_token_limit,
+            "daily_token_limit_exceeded": False,
         }
+        metadata.update({key: value for key, value in runtime_metadata.items() if value is not None})
+        metadata["prompt_version"] = SYNTHESIZER_PROMPT_VERSION
+        metadata["llm_enabled"] = llm_enabled
+        metadata["fallback_used"] = fallback_used
+        metadata["schema_valid"] = schema_valid
+        metadata["generation_latency_ms"] = max(0, generation_latency_ms)
+        metadata["provider_error_code"] = provider_error_code or str(metadata.get("provider_error_code") or "")
+        metadata["provider_error_message"] = provider_error_message or str(metadata.get("provider_error_message") or "")
+        return metadata
 
     def _append_incident_memory_reference(
         self,
