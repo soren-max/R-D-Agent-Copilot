@@ -170,6 +170,14 @@ class TraceStep(BaseModel):
         default=None,
         description="synthesizer 阶段的 LLM token/cost 用量",
     )
+    provider_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Prompt / Provider 治理元数据",
+    )
+    schema_valid: bool | None = Field(
+        default=None,
+        description="最终报告是否通过固定 JSON schema 校验",
+    )
     context_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Context Manager 分段和压缩元数据",

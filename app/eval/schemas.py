@@ -93,6 +93,7 @@ class EvidenceMetricsV2(BaseModel):
 
 
 class ProviderMetricsV2(BaseModel):
+    prompt_version: str = ""
     llm_enabled: bool = False
     provider_name: str = ""
     model_name: str = ""
@@ -100,6 +101,8 @@ class ProviderMetricsV2(BaseModel):
     schema_valid: bool = True
     generation_latency_ms: int = 0
     provider_error_count: int = 0
+    provider_error_code: str = ""
+    provider_error_message: str = ""
 
 
 class EvaluationReportV2(BaseModel):

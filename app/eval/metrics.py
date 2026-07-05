@@ -125,15 +125,33 @@ def evidence_metrics(evidence_chain: dict[str, Any] | None, answer: str = "") ->
 
 def provider_metrics(trace: dict[str, Any]) -> ProviderMetricsV2:
     synthesizer = _stage(trace, "synthesizer")
+    metadata = synthesizer.get("provider_metadata") or {}
+    if metadata:
+        error_code = str(metadata.get("provider_error_code") or "")
+        return ProviderMetricsV2(
+            prompt_version=str(metadata.get("prompt_version") or synthesizer.get("prompt_version") or ""),
+            llm_enabled=bool(metadata.get("llm_enabled", False)),
+            provider_name=str(metadata.get("model_provider") or ""),
+            model_name=str(metadata.get("model_name") or synthesizer.get("model") or ""),
+            fallback_used=bool(metadata.get("fallback_used", False)),
+            schema_valid=bool(metadata.get("schema_valid", True)),
+            generation_latency_ms=int(metadata.get("generation_latency_ms") or synthesizer.get("latency_ms") or 0),
+            provider_error_count=int(bool(error_code)),
+            provider_error_code=error_code,
+            provider_error_message=str(metadata.get("provider_error_message") or ""),
+        )
     usage = synthesizer.get("llm_usage") or {}
     return ProviderMetricsV2(
+        prompt_version=str(synthesizer.get("prompt_version") or ""),
         llm_enabled=bool(synthesizer.get("llm_used", False)),
         provider_name=str(usage.get("provider") or ""),
         model_name=str(synthesizer.get("model") or usage.get("model") or ""),
         fallback_used=not bool(synthesizer.get("llm_used", False)),
-        schema_valid=not bool(synthesizer.get("error_message")),
+        schema_valid=bool(synthesizer.get("schema_valid", not bool(synthesizer.get("error_message")))),
         generation_latency_ms=int(usage.get("latency_ms") or synthesizer.get("latency_ms") or 0),
         provider_error_count=int(bool(synthesizer.get("llm_error"))),
+        provider_error_code=str(synthesizer.get("llm_error") or ""),
+        provider_error_message=str(synthesizer.get("error_message") or ""),
     )
 
 

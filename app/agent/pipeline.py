@@ -189,6 +189,8 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         parsed_output=synthesis.get("parsed_output"),
         error_message=synthesis.get("error_message", ""),
         llm_usage=llm_usage,
+        provider_metadata=synthesis.get("provider_metadata", {}),
+        schema_valid=synthesis.get("schema_valid"),
         context_metadata=context_package.metadata.model_dump(),
         checkpoint_created=checkpoint_created,
         checkpoint_status=checkpoint.status,

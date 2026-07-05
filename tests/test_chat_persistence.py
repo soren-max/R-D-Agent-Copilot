@@ -99,7 +99,7 @@ def test_llm_fallback_saves_synthesizer_step(monkeypatch):
     assert synthesizer_step["engine"] == "fallback"
     assert synthesizer_step["output_json"]["answer_source"] == "fallback"
     assert synthesizer_step["output_json"]["llm_error"] == "missing_api_key"
-    assert synthesizer_step["output_json"]["prompt_version"] == "fallback_prompt_v1"
+    assert synthesizer_step["output_json"]["prompt_version"] == "answer_synthesizer_v1"
     assert run["evaluation"] is not None
 
 
