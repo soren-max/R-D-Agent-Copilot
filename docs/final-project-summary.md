@@ -11,23 +11,28 @@ User Query
 -> Router
 -> Planner
 -> LangGraph Executor
+-> Tool Gateway
 -> Tools/RAG
 -> Trace
+-> Context Manager
 -> Answer Synthesizer
--> Evaluation
+-> Evaluation v2
 -> Evidence Chain
 ```
 
 DeepSeek / OpenAI-compatible LLM 只允许用于最终 Answer Synthesizer，不能控制 Router、Planner、工具选择、Memory freshness 或 Resume 判断。
 
-## 6 周升级路线
+## 已完成能力
 
-1. Week 1：FastAPI `/chat`、Router、Planner、Executor、Trace、fallback answer。
-2. Week 2：RAG pipeline、grounding、evidence chain。
-3. Week 3：Context Manager，把 prompt 输入升级为分层 ContextPackage。
-4. Week 4：Tool Gateway，把 log/config/git/rag 工具调用收口到统一边界。
-5. Week 5：Incident Memory 与 Checkpoint / Resume，让历史结果可召回、run 状态可恢复。
-6. Week 6：Evaluation v2 与 Prompt / Provider Governance，形成可解释指标和稳定最终报告 schema。
+- Context Manager：把 prompt 输入升级为分层 `ContextPackage`。
+- Tool Gateway：把 log/config/git/rag 工具调用收口到统一边界。
+- Incident Memory：让历史排障结论可召回，并以 freshness 标记约束使用范围。
+- Checkpoint / Resume：让 run 状态可恢复，只恢复 pending steps。
+- Evaluation v2：形成可解释指标和稳定最终报告 schema。
+- Provider Governance：让最终报告可版本化、可追踪、可 fallback、可 schema 校验。
+- Runtime Hardening：补齐 provider timeout、retry、fallback、circuit breaker、token/cost metrics 和限流。
+- RAG Pipeline v2：补齐 layered chunking、cleaning / dedup、keyword rerank 和 precision / recall evaluation。
+- Production Readiness：补齐结构化日志、统一异常返回、request_id、Docker Compose 和 release checklist。
 
 ## 核心模块
 
@@ -41,6 +46,9 @@ DeepSeek / OpenAI-compatible LLM 只允许用于最终 Answer Synthesizer，不�
 - Checkpoint / Resume：保存 run 状态，只恢复 pending steps，不让 LLM 判断恢复点。
 - Answer Synthesizer：基于已有 evidence 生成最终中文报告，支持 prompt version、provider metadata、schema validation 和 fallback。
 - Evaluation v2：按 Context、Tool、RAG、Memory、Resume、Evidence、Provider 拆分指标。
+- Runtime Hardening：治理 provider timeout、retry、fallback、circuit breaker、token/cost metrics 和限流。
+- RAG Pipeline v2：按文档类型分层切片，清洗去重，规则重排，并输出 precision / recall / source coverage 指标。
+- Production Readiness：结构化日志、统一错误返回、`request_id` 透传、Docker Compose 和 release checklist。
 
 ## 本地运行
 
@@ -48,7 +56,7 @@ DeepSeek / OpenAI-compatible LLM 只允许用于最终 Answer Synthesizer，不�
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn main:app --reload
 ```
 
 默认 `.env.example` 保持：

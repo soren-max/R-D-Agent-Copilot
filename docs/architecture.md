@@ -25,10 +25,13 @@ User Query
 -> Router
 -> Planner
 -> LangGraph Executor
+-> Tool Gateway
 -> Tools / RAG
 -> Trace
+-> Context Manager
 -> Answer Synthesizer
--> Evaluation
+-> Evaluation v2
+-> Evidence Chain
 -> Response / Trace Viewer
 ```
 
@@ -47,6 +50,9 @@ Executor：
 
 LangGraph：
 只负责 Executor 内部工具节点编排、条件执行、retry、fallback。它不替代 Router 或 Planner。
+
+Tool Gateway：
+统一工具注册、参数校验、重复调用检查、策略校验、结果包装和 trace metadata。Tool Gateway 不重新规划，也不让 LLM 选择工具。
 
 Tools：
 通过 Adapter 层访问日志、配置和 Git 提交记录。当前 Adapter 调用本地 Mock API Server：`/mock/logs`、`/mock/configs`、`/mock/git/commits`，由 Mock API 读取本地确定性样例数据，保持 demo 可复现。Tools 不调用 LLM，不访问真实外部系统，不生成最终答案。
@@ -76,7 +82,10 @@ Persistence：
 使用 SQLite 保存 run、step 和 tool call 数据，默认数据库为 `data/runs.db`。持久化层只保存执行结果，不参与 Router、Planner、Tool Selection 或最终回答生成。
 
 Evaluation：
-在回答生成之后读取 route、plan、tool_results、trace 和 answer，输出 rule-based 质量评分。Evaluation 不参与 Agent 决策，只用于展示执行质量和后续优化方向。
+在回答生成之后读取 route、plan、tool_results、trace 和 answer，输出 Evaluation v2 指标。Evaluation 不参与 Agent 决策，只用于展示执行质量、RAG precision/recall、provider fallback、token/cost 和后续优化方向。
+
+Evidence Chain：
+在 Evaluation v2 之后整理证据项、根因候选和 rule-based 置信度，帮助前端和面试演示解释最终回答来自哪些证据。
 
 Trace Viewer：
 Next.js 前端展示 Chat UI、Agent 回答、Planner steps、工具结果、Trace 时间线和 Evaluation Panel。前端不保存或暴露任何 API Key。
@@ -84,7 +93,7 @@ Next.js 前端展示 Chat UI、Agent 回答、Planner steps、工具结果、Tra
 ## 4. Why This Design
 
 - 先确定性闭环，后引入 LLM：先保证 Router、Planner、Executor、Tools、Trace 能稳定运行，再把 LLM 放到最末端做语言生成。
-- 先纯 Python 验证 Agent 流程，再接 LangGraph：Day1 先验证 Agent 主链路，Day4 以后再把 Executor 内部工具编排迁移到 LangGraph。
+- LangGraph 只放在 Executor 内部：主链路仍由 Router、Planner、Executor、Tool Gateway 和 Synthesizer 分层控制。
 - LLM 只负责语言生成，避免影响工具执行稳定性：DeepSeek 不参与工具选择，不修改 Planner 输出，也不能绕过 LangGraph。
 - Adapter 隔离数据源，保持 Agent 主链路稳定：Tools 面向统一 AdapterResult，当前 Adapter 调用本地 Mock API Server 保证 demo 和测试稳定，未来替换真实系统 API 时不需要改动 Router、Planner、LangGraph 或前端 Trace Viewer。
 - Evaluation 独立于执行链路：先完成回答，再评估质量，避免评分逻辑反过来影响 Router、Planner 或工具执行。

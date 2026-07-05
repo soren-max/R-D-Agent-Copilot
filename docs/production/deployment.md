@@ -17,6 +17,8 @@ Health check:
 curl http://localhost:8000/health
 ```
 
+The root `main.py` file is the current backend entrypoint. Module ownership is documented in [../module-boundaries.md](../module-boundaries.md).
+
 ## Docker Startup
 
 ```bash
@@ -68,7 +70,7 @@ LLM_DAILY_TOKEN_LIMIT=100000
 With `LLM_ENABLED=false`, the system still runs the full backend chain:
 
 ```text
-Router -> Planner -> Executor -> Tools/RAG -> Trace -> Answer Synthesizer fallback
+Router -> Planner -> LangGraph Executor -> Tool Gateway -> Tools/RAG -> Trace -> Context Manager -> Answer Synthesizer fallback -> Evaluation v2 -> Evidence Chain
 ```
 
 This is the recommended demo and CI mode because it requires no network access and no API key.
