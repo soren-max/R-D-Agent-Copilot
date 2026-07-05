@@ -13,3 +13,6 @@ class ContextMetadata(BaseModel):
     compression_ratio: float = 1.0
     section_char_counts: dict[str, int] = Field(default_factory=dict)
     reduced_sections: list[str] = Field(default_factory=list)
+    memory_hit_count: int = 0
+    fresh_memory_count: int = 0
+    stale_memory_count: int = 0
