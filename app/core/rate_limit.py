@@ -10,6 +10,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 
 from app.core.config import RateLimitSettings, get_rate_limit_settings
+from app.core.errors import ErrorCode
+from app.core.responses import error_response
 
 
 @dataclass
@@ -60,10 +62,11 @@ async def rate_limit_middleware(request: Request, call_next: Callable) -> Respon
     if not allowed:
         return JSONResponse(
             status_code=429,
-            content={
-                "error_code": "RATE_LIMIT_EXCEEDED",
-                "message": "request rate limit exceeded",
-            },
+            content=error_response(
+                ErrorCode.RATE_LIMITED,
+                "request rate limit exceeded",
+                getattr(request.state, "request_id", "") or request.headers.get("x-request-id", ""),
+            ),
             headers={"X-RateLimit-Remaining": str(remaining)},
         )
     response = await call_next(request)

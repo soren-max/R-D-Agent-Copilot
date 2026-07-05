@@ -13,6 +13,7 @@ from app.agent.router import IntentRouter
 from app.agent.synthesizer import AnswerSynthesizer
 from app.core.config import get_llm_settings
 from app.core.llm import zero_usage
+from app.core.logging import log_event, set_request_context
 from app.core.models import ChatRequest, ChatResponse
 from app.core.trace import Tracer
 from app.resume import CheckpointStore, RunCheckpoint
@@ -30,12 +31,15 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer = Tracer()
     checkpoint_store = CheckpointStore()
     run_id = tracer.snapshot().trace_id
+    set_request_context(run_id=run_id)
+    log_event(event="pipeline_started", stage="pipeline", run_id=run_id, message="Agent pipeline started")
     checkpoint = RunCheckpoint(run_id=run_id, query=request.query, status="running")
     checkpoint_created = _safe_save_checkpoint(checkpoint_store, checkpoint)
     tracer.start_stage("safety")
     safety_check = detect_prompt_injection(request.query)
     safety_payload = safety_check.model_dump()
     tracer.end_safety_stage(safety_payload)
+    log_event(event="safety_completed", stage="safety", run_id=run_id, message=safety_payload.get("safety_status", ""))
     if safety_check.blocked:
         checkpoint.status = "failed"
         checkpoint.last_error = "safety_blocked"
@@ -60,6 +64,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("router")
     router = IntentRouter()
     route_result = router.route(request.query)
+    log_event(event="router_completed", stage="router", run_id=run_id, message=route_result.intent)
     checkpoint.route = route_result.model_dump()
     _safe_save_checkpoint(checkpoint_store, checkpoint)
     tracer.end_stage(
@@ -78,6 +83,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("planner")
     planner = Planner()
     plan = planner.plan(request.query, route_result)
+    log_event(event="planner_completed", stage="planner", run_id=run_id, message=f"steps={len(plan.steps)}")
     checkpoint.plan = plan.model_dump()
     checkpoint.pending_steps = [step.id for step in plan.steps]
     _safe_save_checkpoint(checkpoint_store, checkpoint)
@@ -145,6 +151,7 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         output=f"tools_called={len([r for r in tool_results if r.tool != 'none'])}",
         tool_results=tool_results,
     )
+    log_event(event="executor_completed", stage="executor", run_id=run_id, message=f"tools={len(tool_results)}")
 
     # ── 4. Synthesizer ──
     tracer.start_stage("synthesizer")
@@ -155,6 +162,13 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         plan=plan.model_dump(),
         tool_results=[result.model_dump() for result in tool_results],
         trace_summary=trace_summary,
+    )
+    log_event(
+        event="context_built",
+        stage="context_manager",
+        run_id=run_id,
+        message="Context package built",
+        total_chars_after=context_package.metadata.total_chars_after,
     )
     checkpoint.tool_evidence_summary = _tool_evidence_summary(tool_results)
     checkpoint.rag_evidence_summary = _rag_evidence_summary(tool_results)
@@ -168,6 +182,13 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
         tool_results,
         trace_summary=trace_summary,
         context_package=context_package,
+    )
+    log_event(
+        event="synthesizer_completed",
+        stage="synthesizer",
+        run_id=run_id,
+        error_code=str(synthesis.get("llm_error") or ""),
+        message=str(synthesis.get("answer_source", "")),
     )
     answer = synthesis.get("answer", "")
     llm_usage = synthesis.get("llm_usage", _default_llm_usage())
@@ -201,10 +222,12 @@ def run_pipeline(request: ChatRequest) -> ChatResponse:
     tracer.start_stage("grounding_checker")
     grounding_check = GroundingChecker().check(answer, grounding_evidence).model_dump()
     tracer.end_grounding_checker_stage(grounding_check)
+    log_event(event="evaluation_v2_ready", stage="evaluation", run_id=run_id, message="Grounding check completed")
     tracer.set_final_answer(answer)
     checkpoint.status = "completed"
     checkpoint.pending_steps = []
     _safe_save_checkpoint(checkpoint_store, checkpoint)
+    log_event(event="checkpoint_completed", stage="checkpoint", run_id=run_id, message=checkpoint.status)
 
     return ChatResponse(
         answer=answer,
@@ -242,9 +265,18 @@ def _tool_results_to_grounding_evidence(tool_results) -> list[dict[str, object]]
 def _safe_save_checkpoint(store: CheckpointStore, checkpoint: RunCheckpoint) -> bool:
     try:
         store.save(checkpoint)
+        log_event(event="checkpoint_saved", stage="checkpoint", run_id=checkpoint.run_id, message=checkpoint.status)
         return True
     except Exception as exc:
         checkpoint.last_error = type(exc).__name__
+        log_event(
+            event="checkpoint_save_failed",
+            stage="checkpoint",
+            level="ERROR",
+            run_id=checkpoint.run_id,
+            error_code=type(exc).__name__,
+            message="Checkpoint save failed",
+        )
         return False
 
 

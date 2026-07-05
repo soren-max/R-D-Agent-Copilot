@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.agent.executor import Executor
+from app.core.logging import log_event
 from app.core.models import Plan
 from app.resume.checkpoint_store import CheckpointStore
 from app.resume.drift import check_checkpoint_drift
@@ -24,6 +25,12 @@ class ResumeService:
     def resume_by_run_id(self, run_id: str) -> dict[str, Any]:
         checkpoint = self.store.get(run_id)
         if checkpoint is None:
+            log_event(
+                event="resume_checkpoint_not_found",
+                stage="resume",
+                error_code="CHECKPOINT_NOT_FOUND",
+                message=run_id,
+            )
             return {
                 "status": "not_found",
                 "resume_reason": "checkpoint_not_found",
@@ -32,6 +39,7 @@ class ResumeService:
 
         drift = check_checkpoint_drift(checkpoint)
         if drift.status != "resumable":
+            log_event(event="resume_skipped", stage="resume", run_id=checkpoint.run_id, message=drift.reason)
             return {
                 "status": drift.status,
                 "resume_reason": drift.reason,
@@ -45,6 +53,7 @@ class ResumeService:
             "completed_steps_count": len(checkpoint.completed_steps),
             "pending_steps_count": len(checkpoint.pending_steps),
         }]
+        log_event(event="resume_started", stage="resume", run_id=checkpoint.run_id, message="Resume started")
         pending_plan = self._pending_plan(checkpoint.plan, checkpoint.pending_steps)
         results = self.executor.execute(checkpoint.query, pending_plan)
         completed_now = [result.step_id for result in results if result.status in {"success", "partial_success"}]
@@ -57,6 +66,7 @@ class ResumeService:
             checkpoint.status = "resumable"
             checkpoint.last_error = ";".join(result.error for result in results if result.error)
         self.store.save(checkpoint)
+        log_event(event="resume_completed", stage="resume", run_id=checkpoint.run_id, message=checkpoint.status)
         trace_events.append({
             "event": "resume_completed",
             "resume_from_run_id": checkpoint.run_id,
@@ -77,6 +87,12 @@ class ResumeService:
     def resume_latest(self) -> dict[str, Any]:
         checkpoint = self.store.latest_resumable()
         if checkpoint is None:
+            log_event(
+                event="resume_checkpoint_not_found",
+                stage="resume",
+                error_code="CHECKPOINT_NOT_FOUND",
+                message="no_resumable_checkpoint",
+            )
             return {"status": "not_found", "resume_reason": "no_resumable_checkpoint", "trace_events": []}
         return self.resume_by_run_id(checkpoint.run_id)
 

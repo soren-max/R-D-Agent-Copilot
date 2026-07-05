@@ -10,6 +10,7 @@ from typing import Any
 from app.tools.policies import ToolGatewayPolicy
 from app.tools.registry import ToolRegistry, default_tool_registry
 from app.tools.result import StandardToolResult
+from app.core.logging import log_event
 
 
 class ToolGateway:
@@ -32,6 +33,7 @@ class ToolGateway:
     ) -> StandardToolResult:
         input_hash = self._input_hash(tool_name, params)
         start = time.perf_counter()
+        log_event(event="tool_gateway_started", stage="tool_gateway", message=tool_name)
 
         if not self.registry.is_registered(tool_name):
             return self._blocked(tool_name, input_hash, start, "tool_not_registered")
@@ -65,6 +67,13 @@ class ToolGateway:
         latency_ms = self._latency_ms(start)
         status = self._status_from_output(output)
         error_code = self._error_code_from_output(output, status)
+        log_event(
+            event="tool_gateway_completed",
+            stage="tool_gateway",
+            latency_ms=latency_ms,
+            error_code=error_code,
+            message=f"{tool_name}:{status}",
+        )
         return StandardToolResult(
             tool_name=str(output.get("tool_name", tool_name)),
             status=status,
@@ -77,6 +86,13 @@ class ToolGateway:
         )
 
     def _blocked(self, tool_name: str, input_hash: str, start: float, error_code: str) -> StandardToolResult:
+        log_event(
+            event="tool_gateway_blocked",
+            stage="tool_gateway",
+            latency_ms=self._latency_ms(start),
+            error_code=error_code,
+            message=tool_name,
+        )
         return StandardToolResult(
             tool_name=tool_name,
             status="blocked",
@@ -96,6 +112,14 @@ class ToolGateway:
         error_code: str,
         metadata: dict[str, Any] | None = None,
     ) -> StandardToolResult:
+        log_event(
+            event="tool_gateway_error",
+            stage="tool_gateway",
+            level="ERROR",
+            latency_ms=self._latency_ms(start),
+            error_code=error_code,
+            message=tool_name,
+        )
         return StandardToolResult(
             tool_name=tool_name,
             status="error",

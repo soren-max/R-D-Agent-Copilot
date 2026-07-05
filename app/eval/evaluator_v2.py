@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.logging import log_event
 from app.eval.metrics import (
     context_metrics,
     evidence_metrics,
@@ -31,6 +32,12 @@ class EvaluationV2Evaluator:
         evidence = evidence_metrics(payload.get("evidence_chain"), answer)
         provider = provider_metrics(trace)
         overall = self._overall(context, tool, rag, memory, resume, evidence)
+        log_event(
+            event="evaluation_v2_completed",
+            stage="evaluation_v2",
+            run_id=str(payload.get("run_id") or trace.get("trace_id") or ""),
+            message=f"overall={overall}",
+        )
         return EvaluationReportV2(
             run_id=str(payload.get("run_id") or trace.get("trace_id") or ""),
             overall=overall,

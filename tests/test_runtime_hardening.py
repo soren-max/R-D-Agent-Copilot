@@ -282,4 +282,4 @@ def test_local_rate_limit_returns_uniform_error(monkeypatch):
 
     assert first.status_code == 200
     assert second.status_code == 429
-    assert second.json()["error_code"] == "RATE_LIMIT_EXCEEDED"
+    assert second.json()["error_code"] == "RATE_LIMITED"

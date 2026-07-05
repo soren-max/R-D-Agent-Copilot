@@ -12,6 +12,7 @@ import uuid
 from typing import Any
 
 from app.core.models import ToolCallRecord, TraceData, TraceSkippedNode, TraceStep, TraceToolCall
+from app.core.logging import get_request_id
 
 
 class Tracer:
@@ -273,6 +274,7 @@ class Tracer:
         """返回当前请求的完整追踪数据。"""
         return TraceData(
             trace_id=self._trace_id,
+            request_id=get_request_id(),
             steps=self._steps,
             final_answer=self._final_answer,
         )

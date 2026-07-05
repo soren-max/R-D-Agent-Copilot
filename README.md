@@ -50,6 +50,7 @@ R&D Agent Copilot 是一个面向研发排障场景的 AI Agent 系统，支持�
 - Advanced RAG v0.8.0：提供可选 OpenAI-compatible embedding / rerank provider，并保留本地 deterministic fallback。
 - Evidence Chain：将 log/config/git/rag/evaluation 输出整理为证据项、根因候选和 rule-based 置信度。
 - Prompt Versioning：Router、Planner、Answer Synthesizer 记录 `prompt_name`、`prompt_version`、`model`、`raw_llm_output`、`parsed_output` 和错误信息到 Trace，支持策略回溯。
+- Production Readiness：提供结构化日志、`request_id` 透传、统一异常返回、可选统一响应体、Docker Compose 一键部署和 release checklist。
 - Docker + CI：提供 Docker Compose 本地全栈启动和 GitHub Actions CI。
 
 ## Architecture
@@ -125,7 +126,6 @@ npm run dev
 Docker：
 
 ```bash
-cp .env.example .env
 docker compose up --build
 ```
 
@@ -135,6 +135,8 @@ docker compose up --build
 - Frontend: http://localhost:3000
 
 默认 `LLM_ENABLED=false`，不需要 DeepSeek API Key 也可以运行完整 fallback 链路。开启 DeepSeek / OpenAI-compatible provider 时，只在本地 `.env` 中设置：
+
+生产化启动和发布前检查见 [Deployment Guide](docs/production/deployment.md) 与 [Release Checklist](docs/release-checklist.md)。后端支持结构化 JSON 日志、统一异常返回、`X-Request-ID` 透传，以及通过 `X-Response-Envelope: true` 启用兼容式统一成功响应体。
 
 ```bash
 LLM_ENABLED=true

@@ -318,6 +318,7 @@ class TraceData(BaseModel):
     """全链路追踪数据。"""
 
     trace_id: str = Field(description="唯一追踪 ID")
+    request_id: str = Field(default="", description="HTTP request ID")
     steps: list[TraceStep] = Field(default_factory=list, description="各阶段记录")
     final_answer: str = Field(default="", description="最终回答")
     persistence_error: str | None = Field(
@@ -342,6 +343,7 @@ class ChatResponse(BaseModel):
     """聊天响应。"""
 
     run_id: str = Field(default="", description="持久化 Run ID，与 trace_id 保持一致")
+    request_id: str = Field(default="", description="HTTP request ID")
     answer: str = Field(description="最终回答（中文）")
     answer_source: str = Field(default="fallback", description="答案来源：llm | fallback")
     llm_used: bool = Field(default=False, description="是否使用 LLM 生成最终答案")

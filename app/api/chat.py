@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import time
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.agent.pipeline import run_pipeline
+from app.core.logging import get_request_id, log_event
 from app.core.models import ChatRequest, ChatResponse, TraceStep
 from app.eval import RuleBasedEvaluator
 from app.evidence import EvidenceChainBuilder
@@ -22,7 +23,11 @@ router = APIRouter(tags=["chat"])
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat_endpoint(body: ChatRequest) -> ChatResponse:
+def chat_endpoint_http(body: ChatRequest, request: Request) -> ChatResponse:
+    return chat_endpoint(body, request_id=request.state.request_id)
+
+
+def chat_endpoint(body: ChatRequest, request_id: str | None = None) -> ChatResponse:
     """
     接收用户问题，依次经过：
       Router → Planner → Executor → Synthesizer → Trace
@@ -30,6 +35,8 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
     """
     response = run_pipeline(body)
     response.run_id = response.trace.trace_id
+    response.request_id = request_id or get_request_id()
+    response.trace.request_id = response.request_id
     evaluation_start = time.perf_counter()
 
     try:
@@ -59,6 +66,13 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                 overall_score=response.evaluation.overall_score,
             )
         )
+        log_event(
+            event="evaluation_completed",
+            stage="evaluation",
+            run_id=response.run_id,
+            latency_ms=evaluation_latency_ms,
+            message=f"overall={response.evaluation.overall_score}",
+        )
     except Exception:
         evaluation_latency_ms = int((time.perf_counter() - evaluation_start) * 1000)
         response.evaluation = None
@@ -71,6 +85,15 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                 latency_ms=evaluation_latency_ms,
                 evaluation_error="evaluation_failed",
             )
+        )
+        log_event(
+            event="evaluation_failed",
+            stage="evaluation",
+            level="ERROR",
+            run_id=response.run_id,
+            latency_ms=evaluation_latency_ms,
+            error_code="evaluation_failed",
+            message="Evaluation failed",
         )
 
     evidence_start = time.perf_counter()
@@ -134,6 +157,7 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                         memory_created=False,
                     )
                 )
+                log_event(event="incident_memory_skipped", stage="incident_memory", run_id=response.run_id, message="memory_created=false")
             else:
                 created = MemoryStore().add(memory)
                 response.trace.steps.append(
@@ -146,6 +170,7 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                         memory_id=created.memory_id,
                     )
                 )
+                log_event(event="incident_memory_created", stage="incident_memory", run_id=response.run_id, message=created.memory_id)
         except Exception:
             response.trace.steps.append(
                 TraceStep(
@@ -156,6 +181,14 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
                     memory_created=False,
                     error_message="memory_write_failed",
                 )
+            )
+            log_event(
+                event="incident_memory_failed",
+                stage="incident_memory",
+                level="ERROR",
+                run_id=response.run_id,
+                error_code="memory_write_failed",
+                message="Memory write failed",
             )
 
     try:

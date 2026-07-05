@@ -45,7 +45,8 @@ def test_v070_trace_export_returns_404_for_unknown_run():
     response = TestClient(app).get("/trace/export/not-found")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "run_not_found"
+    assert response.json()["success"] is False
+    assert response.json()["error_code"] == "CHECKPOINT_NOT_FOUND"
 
 
 def test_v070_eval_report_lists_local_reports():
@@ -57,4 +58,3 @@ def test_v070_eval_report_lists_local_reports():
     assert "bad_case_replay" in reports
     assert "rag_failed_cases" in reports
     assert reports["planning_eval"]["path"] == "data/eval/planning_eval_report.md"
-
