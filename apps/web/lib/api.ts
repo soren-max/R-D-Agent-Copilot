@@ -273,6 +273,17 @@ export type ProviderMetadata = {
   generation_latency_ms?: number;
   provider_error_code?: string;
   provider_error_message?: string;
+  // — extended demo fields —
+  timeout_ms?: number;
+  retry_count?: number;
+  provider_status?: string;
+  fallback_provider_used?: boolean;
+  circuit_open?: boolean;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  daily_token_usage?: number;
+  daily_token_limit_exceeded?: boolean;
 };
 
 export type ContextMetadata = {
@@ -290,6 +301,7 @@ export type IncidentMemoryEntry = {
   match_reason?: string;
   freshness_status?: "fresh" | "weak" | "stale";
   recalled_at?: string;
+  source_run_id?: string;
 };
 
 export type IncidentMemory = {

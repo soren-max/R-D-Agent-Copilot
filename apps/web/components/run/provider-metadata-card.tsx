@@ -15,6 +15,16 @@ export function ProviderMetadataCard({ metadata }: Props) {
         <MetricCard label="Fallback Used" value={metadata.fallback_used ? "Yes" : "No"} />
         <MetricCard label="Schema Valid" value={metadata.schema_valid ? "Yes" : "No"} />
         <MetricCard label="Latency" value={metadata.generation_latency_ms != null ? `${metadata.generation_latency_ms}ms` : "—"} />
+        <MetricCard label="Timeout" value={metadata.timeout_ms != null ? `${metadata.timeout_ms}ms` : "—"} />
+        <MetricCard label="Retry Count" value={metadata.retry_count ?? "—"} />
+        <MetricCard label="Provider Status" value={metadata.provider_status || "—"} />
+        <MetricCard label="Fallback Provider Used" value={metadata.fallback_provider_used ? "Yes" : "No"} />
+        <MetricCard label="Circuit Open" value={metadata.circuit_open ? "Yes" : "No"} />
+        <MetricCard label="Prompt Tokens" value={metadata.prompt_tokens?.toLocaleString() ?? "—"} />
+        <MetricCard label="Completion Tokens" value={metadata.completion_tokens?.toLocaleString() ?? "—"} />
+        <MetricCard label="Total Tokens" value={metadata.total_tokens?.toLocaleString() ?? "—"} />
+        <MetricCard label="Daily Token Usage" value={metadata.daily_token_usage?.toLocaleString() ?? "—"} />
+        <MetricCard label="Daily Limit Exceeded" value={metadata.daily_token_limit_exceeded ? "Yes" : "No"} />
         {metadata.provider_error_code && <MetricCard label="Error Code" value={metadata.provider_error_code} />}
       </div>
     </div>

@@ -14,25 +14,37 @@ export function CheckpointCard({ checkpoint }: Props) {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-medium mb-1" style={{color:"var(--text-tertiary)"}}>Completed Steps</p>
+            <p className="text-xs font-medium mb-1.5" style={{color:"var(--text-tertiary)"}}>Completed Steps</p>
             <div className="flex flex-wrap gap-1">
-              {(checkpoint.completed_steps ?? []).map(s => <span key={s} className="rounded-md px-2 py-1 text-xs bg-emerald-50 text-emerald-700">{s}</span>)}
+              {(checkpoint.completed_steps ?? []).map(s => <span key={s} className="rounded-md px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-700">{s}</span>)}
+              {(checkpoint.completed_steps ?? []).length === 0 && <span className="text-xs" style={{color:"var(--text-tertiary)"}}>—</span>}
             </div>
           </div>
           <div>
-            <p className="text-xs font-medium mb-1" style={{color:"var(--text-tertiary)"}}>Pending Steps</p>
+            <p className="text-xs font-medium mb-1.5" style={{color:"var(--text-tertiary)"}}>Pending Steps</p>
             <div className="flex flex-wrap gap-1">
               {(checkpoint.pending_steps ?? []).map(s => <span key={s} className="rounded-md px-2 py-1 text-xs" style={{background:"var(--bg-subtle)",color:"var(--text-tertiary)"}}>{s}</span>)}
+              {(checkpoint.pending_steps ?? []).length === 0 && <span className="text-xs" style={{color:"var(--text-tertiary)"}}>—</span>}
             </div>
           </div>
         </div>
         {checkpoint.last_error && (
           <div className="rounded-lg px-3 py-2 text-xs" style={{color:"var(--error)",background:"var(--error-bg)"}}>Last error: {checkpoint.last_error}</div>
         )}
-        <div className="flex gap-2">
-          <button className="rounded-lg px-4 py-2 text-xs font-medium text-white" style={{background:"var(--accent)"}} disabled>查看 checkpoint</button>
-          <button className="rounded-lg px-4 py-2 text-xs font-medium" style={{border:"1px solid var(--border)",color:"var(--text-secondary)"}} disabled>继续该 Run</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-lg px-4 py-2 text-xs font-medium text-white transition-all hover:opacity-90" style={{background:"var(--accent)"}} disabled>
+            查看 checkpoint
+          </button>
+          <button className="rounded-lg px-4 py-2 text-xs font-medium transition-all" style={{border:"1px solid var(--border)",color:"var(--text-secondary)"}} disabled>
+            继续该 Run
+          </button>
+          <button className="rounded-lg px-4 py-2 text-xs font-medium transition-all" style={{border:"1px solid var(--border)",color:"var(--text-secondary)"}} disabled>
+            恢复最近未完成 Run
+          </button>
         </div>
+        <p className="text-xs" style={{color:"var(--warning)"}}>
+          ⚠ Demo-only — Continue/resume API endpoints not connected. Backend integration point: <code className="font-mono" style={{color:"var(--text-secondary)"}}>POST /runs/{`{runId}`}/continue</code>
+        </p>
       </div>
     </div>
   );
