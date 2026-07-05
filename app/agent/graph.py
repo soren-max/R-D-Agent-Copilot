@@ -7,15 +7,16 @@ LangGraph 只在 Executor 内部编排工具节点；Router 和 Planner 仍由�
 
 from __future__ import annotations
 
-import time
 from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
 from app.rag.retriever import LocalKnowledgeRetriever
 from app.tools.config_tool import ConfigTool
+from app.tools.gateway import ToolGateway
 from app.tools.git_tool import GitTool
 from app.tools.log_tool import LogTool
+from app.tools.result import StandardToolResult
 from apps.api.app.rag.retriever import KeywordRetriever
 
 
@@ -96,6 +97,7 @@ def _execute_tool_if_needed(
         "error": error,
         "retry_count": retry_count,
         "latency_ms": latency_ms,
+        "gateway_metadata": output.get("gateway_metadata", {}),
     }
     next_state["tool_results"].append(result)
     next_state["tool_calls"].append(_tool_call_trace(result))
@@ -124,22 +126,30 @@ def _run_tool_with_retry(tool: Any, query: str) -> tuple[dict[str, Any], int, in
 
 
 def _run_tool_once(tool: Any, query: str) -> tuple[dict[str, Any], int]:
-    start = time.perf_counter()
-    try:
-        output = tool.run(query)
-        latency_ms = int((time.perf_counter() - start) * 1000)
-        return output, latency_ms
-    except Exception as exc:
-        latency_ms = int((time.perf_counter() - start) * 1000)
-        return {
-            "tool_name": getattr(tool, "name", ""),
-            "status": "failed",
-            "result": "",
-            "confidence": 0.0,
-            "source": "",
-            "documents": [],
-            "error": f"{type(exc).__name__}: {exc}",
-        }, latency_ms
+    gateway_result = ToolGateway().execute(
+        getattr(tool, "name", ""),
+        {"query": query},
+        tool=tool,
+    )
+    return _gateway_result_to_tool_output(gateway_result), gateway_result.latency_ms
+
+
+def _gateway_result_to_tool_output(gateway_result: StandardToolResult) -> dict[str, Any]:
+    raw_output = dict(gateway_result.metadata.get("raw_output", {}))
+    output = {
+        "tool_name": raw_output.get("tool_name", gateway_result.tool_name),
+        "status": gateway_result.legacy_status(),
+        "result": raw_output.get("result", ""),
+        "confidence": raw_output.get("confidence", 0.0),
+        "source": raw_output.get("source", ""),
+        "documents": raw_output.get("documents", []),
+        "rag_metadata": raw_output.get("rag_metadata", {}),
+        "error": raw_output.get("error", ""),
+        "gateway_metadata": gateway_result.model_dump(),
+    }
+    if gateway_result.status in {"error", "blocked"}:
+        output["error"] = gateway_result.error_code or output["error"]
+    return output
 
 
 def _should_retry(output: dict[str, Any]) -> bool:
@@ -172,14 +182,20 @@ def _copy_state(state: AgentGraphState) -> AgentGraphState:
 
 def _tool_call_trace(result: dict[str, Any]) -> dict[str, Any]:
     rag_metadata = result.get("rag_metadata", {})
+    gateway_metadata = result.get("gateway_metadata", {})
     return {
         "node": result.get("node", ""),
         "tool_name": result.get("tool_name", result.get("tool", "")),
         "status": result.get("status", "pending"),
+        "tool_status": gateway_metadata.get("status", result.get("status", "pending")),
         "retry_count": result.get("retry_count", 0),
         "error": result.get("error", ""),
+        "error_code": gateway_metadata.get("error_code", ""),
         "latency_ms": result.get("latency_ms", 0),
         "source": result.get("source", ""),
+        "input_hash": gateway_metadata.get("input_hash", ""),
+        "evidence_count": gateway_metadata.get("evidence_count", 0),
+        "safe_summary": gateway_metadata.get("safe_summary", ""),
         "retrieval_top_k": rag_metadata.get("retrieval_top_k"),
         "score_threshold": rag_metadata.get("score_threshold"),
         "retrieved_count": rag_metadata.get("retrieved_count"),

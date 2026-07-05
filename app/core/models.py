@@ -117,10 +117,15 @@ class TraceToolCall(BaseModel):
     node: str = ""
     tool_name: str
     status: str
+    tool_status: str = ""
     retry_count: int = 0
     error: str = ""
+    error_code: str = ""
     latency_ms: int = 0
     source: str = ""
+    input_hash: str = ""
+    evidence_count: int = 0
+    safe_summary: str = ""
     retrieval_top_k: int | None = None
     score_threshold: float | None = None
     retrieved_count: int | None = None
