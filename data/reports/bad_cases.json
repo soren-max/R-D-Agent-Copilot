@@ -1,0 +1,41 @@
+{
+  "rag_failed_cases": [],
+  "planning_failed_cases": [
+    {
+      "id": "plan_012",
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "simple_qa",
+      "actual_intent": "knowledge_qa",
+      "route_reason": "检测到程序类问句模式「怎么排查？」，判定为简单问答。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "rag_retriever"
+      ],
+      "missing_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 0.25,
+      "route_ok": false,
+      "tools_ok": false,
+      "passed": false
+    }
+  ]
+}
