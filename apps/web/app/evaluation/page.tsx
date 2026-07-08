@@ -71,6 +71,20 @@ export default function EvaluationPage() {
       {/* Bad Cases */}
       <BadCaseTable cases={mockBadCases} />
 
+      {/* Benchmark summary */}
+      <div className="card">
+        <div className="card-header"><h3 className="text-sm font-semibold" style={{color:"var(--text-primary)"}}>Benchmark Summary</h3></div>
+        <div className="card-body">
+          <div className="rounded-xl border px-4 py-3" style={{borderColor:"var(--border)",background:"var(--bg-subtle)"}}>
+            <p className="text-xs leading-5" style={{color:"var(--text-secondary)"}}>
+              Benchmark 报告位于 <code className="font-mono" style={{color:"var(--accent)"}}>data/reports/benchmark_report.md</code>。
+              包含 RAG Recall@K、MRR、Hit Rate、Router Accuracy、Tool Selection Accuracy 等指标。
+              当前页面展示 Mock 评估面板作为 UI 参考，真实数据需通过后端 Evaluation API 或本地报告读取。
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Footer: disclaimer */}
       <div className="mt-6 rounded-xl border px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}>
         <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>

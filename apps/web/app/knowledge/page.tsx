@@ -55,10 +55,38 @@ export default function KnowledgePage() {
         <div>
           <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>知识库管理</h2>
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            RAG 知识库文档、Chunk 切分和检索 Evidence 可视化。
+            RAG Pipeline — 文档入库 → Chunk 切分 → Hybrid 检索 → Grounding 校验。
           </p>
         </div>
         <StatusBadge status="success" label="Mock Data" />
+      </div>
+
+      {/* RAG Pipeline Overview */}
+      <div className="card mb-5">
+        <div className="card-header">
+          <h3 className="text-sm font-semibold" style={{color:"var(--text-primary)"}}>RAG Pipeline</h3>
+        </div>
+        <div className="card-body">
+          <div className="flex items-center gap-0">
+            {[
+              {label:"Docs",desc:"Markdown 入库",color:"#6366f1"},
+              {label:"Chunk",desc:"标题/段落切分",color:"#0284c7"},
+              {label:"Metadata",desc:"source/section/doc_type",color:"#059669"},
+              {label:"Hybrid",desc:"keyword+vector",color:"#d97706"},
+              {label:"ReRank",desc:"分数重排序",color:"#8b5cf6"},
+              {label:"Grounding",desc:"证据校验",color:"#0f172a"},
+            ].map((s,i)=>(
+              <div key={s.label} className="flex items-center gap-0 flex-1">
+                <div className="flex flex-col items-center min-w-0">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{background:s.color}}>{i+1}</div>
+                  <span className="mt-1 text-[10px] font-semibold text-center" style={{color:"var(--text-secondary)"}}>{s.label}</span>
+                  <span className="text-[9px] text-center" style={{color:"var(--text-tertiary)"}}>{s.desc}</span>
+                </div>
+                {i<5 && <div className="flex-1 h-px mx-1 mb-5" style={{background:"var(--border)"}} />}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}

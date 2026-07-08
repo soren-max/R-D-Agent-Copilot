@@ -66,6 +66,15 @@ export default function Home() {
 
   return (
     <AppShell title="Agent Console">
+      {/* Status badges bar */}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <span className="badge-green"><span className="dot-green" /> LangGraph</span>
+        <span className="badge-green"><span className="dot-green" /> Trace Enabled</span>
+        <span className="badge-green"><span className="dot-green" /> Evaluation v2</span>
+        <span className="badge-blue"><span className="dot-amber" /> DeepSeek Optional</span>
+        <span className="badge-slate"><span className="dot-green" /> LocalAdapter</span>
+      </div>
+
       {/* Quick metrics bar */}
       <div className="mb-5 grid gap-3 sm:grid-cols-4">
         <MetricCard label="意图识别" value={routeType === "complex_troubleshooting" ? "复杂排障" : routeType === "simple_qa" ? "简单问答" : ""} secondary={result?.route?.confidence ? `置信度 ${result.route.confidence}` : undefined} />

@@ -63,6 +63,33 @@ export default function SafetyPage() {
         <SecretMaskingPanel secrets={mockSecrets} />
       </div>
 
+      {/* Tool Allowlist + Adapter Boundary */}
+      <div className="grid gap-5 lg:grid-cols-2 mb-5">
+        <div className="card">
+          <div className="card-header"><h3 className="text-sm font-semibold" style={{color:"var(--text-primary)"}}>Tool Allowlist</h3></div>
+          <div className="card-body">
+            <div className="flex flex-wrap gap-2">
+              {["log_tool","config_tool","git_tool","rag_retriever"].map(t => (
+                <span key={t} className="rounded-xl border px-4 py-3 text-sm font-mono" style={{borderColor:"var(--border)",background:"var(--bg-subtle)",color:"var(--text-primary)"}}>
+                  <span className="dot-success inline-block mr-2 align-middle" />{t}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs" style={{color:"var(--text-tertiary)"}}>仅允许注册工具被 Executor 调用。禁止 shell_tool、db_tool、file_write_tool 等破坏性工具。</p>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><h3 className="text-sm font-semibold" style={{color:"var(--text-primary)"}}>Adapter Boundary</h3></div>
+          <div className="card-body space-y-2 text-xs" style={{color:"var(--text-secondary)"}}>
+            <div className="flex items-center gap-2"><span className="dot-green" /> Current: <strong>LocalAdapter / Mock</strong></div>
+            <div className="flex items-center gap-2"><span className="dot-green" /> Default: <strong>No outbound calls</strong></div>
+            <div className="flex items-center gap-2"><span className="dot-amber" /> Design: Replaceable via API Adapter interface</div>
+            <div className="flex items-center gap-2"><span className="dot-amber" /> Sensitive data should NOT be sent to external LLM</div>
+            <p className="mt-2 pt-2 border-t" style={{borderColor:"var(--border-light)"}}>当前使用本地 Mock 数据，不涉及真实日志平台、配置中心或 Git API。后续可替换为 RealAdapter。</p>
+          </div>
+        </div>
+      </div>
+
       {/* Impact notice */}
       <div className="rounded-xl border px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}>
         <p className="text-xs leading-5" style={{ color: "var(--text-tertiary)" }}>
