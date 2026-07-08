@@ -1,0 +1,16 @@
+{
+  "id": "complex_troubleshooting",
+  "name": "Complex Troubleshooting - Order 500",
+  "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+  "expected_route": "complex_troubleshooting",
+  "expected_tools": ["log_tool", "config_tool", "git_tool", "rag_retriever"],
+  "expected_skipped_nodes": [],
+  "expected_rag_sources": [
+    "data/docs/order-service-faq.md",
+    "data/docs/service-logs.md",
+    "data/docs/troubleshooting-guide.md"
+  ],
+  "expected_grounding_status": "grounded",
+  "expected_evidence_keywords": ["500", "order-service", "payment.timeout", "trace_id"],
+  "demo_notes": "面试演示时强调这是完整排障链路：Router 识别复杂排障，Planner 规划日志、配置、Git 和 RAG，Trace 中能看到每个工具节点和证据来源。"
+}

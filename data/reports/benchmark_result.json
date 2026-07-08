@@ -1,0 +1,435 @@
+{
+  "generated_at": "2026-07-08T07:52:55.442935+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "runs_per_case": 3,
+  "summary": {
+    "total_requests": 9,
+    "success_count": 9,
+    "success_rate": 1.0,
+    "fallback_rate": 1.0,
+    "avg_latency_ms": 1014.12,
+    "p50_latency_ms": 1005.53,
+    "p95_latency_ms": 1114.45,
+    "p99_latency_ms": 1164.26,
+    "rag_latency_ms": {
+      "avg": 93.56,
+      "p50": 93.0,
+      "p95": 94.6,
+      "p99": 94.92
+    },
+    "executor_latency_ms": {
+      "avg": 221.33,
+      "p50": 209.0,
+      "p95": 268.4,
+      "p99": 269.68
+    },
+    "trace_write_latency_ms": {
+      "avg": null,
+      "p50": null,
+      "p95": null,
+      "p99": null
+    },
+    "llm_used_count": 0,
+    "llm_disabled_count": 9
+  },
+  "cases": [
+    {
+      "case_id": "simple_qa",
+      "case_name": "Simple QA - Config Center",
+      "query": "什么是配置中心？",
+      "summary": {
+        "total_requests": 3,
+        "success_count": 3,
+        "success_rate": 1.0,
+        "fallback_rate": 1.0,
+        "avg_latency_ms": 1071.57,
+        "p50_latency_ms": 1021.07,
+        "p95_latency_ms": 1161.15,
+        "p99_latency_ms": 1173.6,
+        "rag_latency_ms": {
+          "avg": 94.0,
+          "p50": 94.0,
+          "p95": 94.9,
+          "p99": 94.98
+        },
+        "executor_latency_ms": {
+          "avg": 230.0,
+          "p50": 211.0,
+          "p95": 264.1,
+          "p99": 268.82
+        },
+        "trace_write_latency_ms": {
+          "avg": null,
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "llm_used_count": 0,
+        "llm_disabled_count": 3
+      },
+      "latest_route_type": "simple_qa",
+      "latest_route_intent": "knowledge_qa",
+      "latest_tools": [
+        "rag_retriever"
+      ],
+      "latest_skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "latest_grounding_status": "grounded",
+      "latest_answer_source": "fallback",
+      "latest_llm_error": "llm_disabled"
+    },
+    {
+      "case_id": "complex_troubleshooting",
+      "case_name": "Complex Troubleshooting - Order 500",
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "summary": {
+        "total_requests": 3,
+        "success_count": 3,
+        "success_rate": 1.0,
+        "fallback_rate": 1.0,
+        "avg_latency_ms": 978.64,
+        "p50_latency_ms": 992.61,
+        "p95_latency_ms": 1016.05,
+        "p99_latency_ms": 1018.13,
+        "rag_latency_ms": {
+          "avg": 93.33,
+          "p50": 93.0,
+          "p95": 93.9,
+          "p99": 93.98
+        },
+        "executor_latency_ms": {
+          "avg": 229.33,
+          "p50": 216.0,
+          "p95": 261.0,
+          "p99": 265.0
+        },
+        "trace_write_latency_ms": {
+          "avg": null,
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "llm_used_count": 0,
+        "llm_disabled_count": 3
+      },
+      "latest_route_type": "simple_qa",
+      "latest_route_intent": "knowledge_qa",
+      "latest_tools": [
+        "rag_retriever"
+      ],
+      "latest_skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "latest_grounding_status": "grounded",
+      "latest_answer_source": "fallback",
+      "latest_llm_error": "llm_disabled"
+    },
+    {
+      "case_id": "insufficient_evidence",
+      "case_name": "Insufficient Evidence",
+      "query": "项目里没有覆盖的某个未知系统故障应该怎么处理？",
+      "summary": {
+        "total_requests": 3,
+        "success_count": 3,
+        "success_rate": 1.0,
+        "fallback_rate": 1.0,
+        "avg_latency_ms": 992.14,
+        "p50_latency_ms": 986.83,
+        "p95_latency_ms": 1003.66,
+        "p99_latency_ms": 1005.16,
+        "rag_latency_ms": {
+          "avg": 93.33,
+          "p50": 93.0,
+          "p95": 93.9,
+          "p99": 93.98
+        },
+        "executor_latency_ms": {
+          "avg": 204.67,
+          "p50": 205.0,
+          "p95": 205.9,
+          "p99": 205.98
+        },
+        "trace_write_latency_ms": {
+          "avg": null,
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "llm_used_count": 0,
+        "llm_disabled_count": 3
+      },
+      "latest_route_type": "simple_qa",
+      "latest_route_intent": "knowledge_qa",
+      "latest_tools": [
+        "rag_retriever"
+      ],
+      "latest_skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "latest_grounding_status": "grounded",
+      "latest_answer_source": "fallback",
+      "latest_llm_error": "llm_disabled"
+    }
+  ],
+  "raw_runs": [
+    {
+      "case_id": "simple_qa",
+      "case_name": "Simple QA - Config Center",
+      "run_index": 1,
+      "query": "什么是配置中心？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 1176.71,
+      "run_id": "691232a3-2e31-4120-9d09-579ffcd80a0b",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 93,
+      "executor_latency_ms": 270,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "simple_qa",
+      "case_name": "Simple QA - Config Center",
+      "run_index": 2,
+      "query": "什么是配置中心？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 1016.92,
+      "run_id": "63f1576e-9d95-4aeb-90ce-60de478f29c6",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 95,
+      "executor_latency_ms": 211,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "simple_qa",
+      "case_name": "Simple QA - Config Center",
+      "run_index": 3,
+      "query": "什么是配置中心？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 1021.07,
+      "run_id": "13ce058e-9691-477d-8b00-0fa00f4b980c",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 94,
+      "executor_latency_ms": 209,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "complex_troubleshooting",
+      "case_name": "Complex Troubleshooting - Order 500",
+      "run_index": 1,
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 1018.65,
+      "run_id": "a35496f4-a1da-49dd-b782-8b79b6e835a3",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 94,
+      "executor_latency_ms": 216,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "complex_troubleshooting",
+      "case_name": "Complex Troubleshooting - Order 500",
+      "run_index": 2,
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 924.66,
+      "run_id": "6d6a6ce8-e317-44b7-8f06-85a2a317423e",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 93,
+      "executor_latency_ms": 206,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "complex_troubleshooting",
+      "case_name": "Complex Troubleshooting - Order 500",
+      "run_index": 3,
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 992.61,
+      "run_id": "9b09a7ec-7959-4306-a917-03ca3fc0a792",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 93,
+      "executor_latency_ms": 266,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "insufficient_evidence",
+      "case_name": "Insufficient Evidence",
+      "run_index": 1,
+      "query": "项目里没有覆盖的某个未知系统故障应该怎么处理？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 1005.53,
+      "run_id": "abae4b73-ec53-41cc-a792-67cd2687fb37",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 93,
+      "executor_latency_ms": 205,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "insufficient_evidence",
+      "case_name": "Insufficient Evidence",
+      "run_index": 2,
+      "query": "项目里没有覆盖的某个未知系统故障应该怎么处理？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 984.07,
+      "run_id": "be712a31-2b99-4874-8432-c4840354a25f",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 93,
+      "executor_latency_ms": 203,
+      "trace_write_latency_ms": null
+    },
+    {
+      "case_id": "insufficient_evidence",
+      "case_name": "Insufficient Evidence",
+      "run_index": 3,
+      "query": "项目里没有覆盖的某个未知系统故障应该怎么处理？",
+      "success": true,
+      "status_code": 200,
+      "error_code": "",
+      "latency_ms": 986.83,
+      "run_id": "a30bf3b4-6c20-42d3-9b33-fea3526c63a1",
+      "answer_source": "fallback",
+      "llm_used": false,
+      "llm_error": "llm_disabled",
+      "route_type": "simple_qa",
+      "route_intent": "knowledge_qa",
+      "tools": [
+        "rag_retriever"
+      ],
+      "skipped_nodes": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "grounding_status": "grounded",
+      "rag_latency_ms": 94,
+      "executor_latency_ms": 206,
+      "trace_write_latency_ms": null
+    }
+  ]
+}
