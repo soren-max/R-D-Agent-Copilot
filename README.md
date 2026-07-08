@@ -280,6 +280,32 @@ python scripts/benchmark_chat.py --runs 3
 
 标准演示 Case 位于 `data/demo_cases/`，覆盖简单知识问答、订单 500 复杂排障和证据不足 fallback。详细讲解见 [docs/demo-cases.md](docs/demo-cases.md)。
 
+## RAG and Planning Evaluation
+
+本项目提供本地可复现的 RAG 与 Planning 评测脚本，用来说明知识库召回质量、Router / Planner 规划质量，以及失败样例如何沉淀为 bad case replay。评测只读取本地文件和 deterministic 规则，不调用 DeepSeek、不执行真实工具、不连接外部 API。
+
+运行 RAG 评测：
+
+```bash
+python scripts/eval_rag.py
+```
+
+运行 Planning 评测：
+
+```bash
+python scripts/eval_planning.py
+```
+
+默认输出：
+
+- `data/reports/rag_eval_result.json`
+- `data/reports/rag_eval_report.md`
+- `data/reports/planning_eval_result.json`
+- `data/reports/planning_eval_report.md`
+- `data/reports/bad_cases.json`
+
+核心指标包括 `Recall@3`、`Recall@5`、`Precision@3`、`MRR`、`Hit Rate`、`grounding_pass_rate`、`route_accuracy`、`tool_selection_accuracy` 和 `step_coverage`。这些指标只代表本地样例评测集，不代表生产召回率或线上性能。详细说明见 [docs/rag-planning-evaluation.md](docs/rag-planning-evaluation.md)。
+
 ## RAG Pipeline
 
 RAG 读取 `data/docs` 下的本地知识文件，默认样例以 Markdown 为主；v2 也支持 normal/config/log/code 文件类型。系统通过文档结构、段落、行窗口和代码符号边界生成 chunk，并为每个 chunk 保留 `source`、`title`、`section`、`chunk_id`、`doc_type`、`line_range`、`content_hash` 和 `updated_at` metadata。检索层提供 deterministic local vector search、keyword fallback 和 hybrid retrieval，不调用外部向量库、embedding 服务或企业 API。

@@ -1,0 +1,816 @@
+{
+  "metrics": {
+    "total_cases": 17,
+    "Recall@3": 1.0,
+    "Recall@5": 1.0,
+    "Precision@3": 0.3922,
+    "MRR": 0.9412,
+    "Hit Rate": 1.0,
+    "grounding_pass_rate": 1.0,
+    "average_latency_ms": 23.96,
+    "failed_cases": 0
+  },
+  "failed_case_details": [],
+  "cases": [
+    {
+      "id": "rag_001",
+      "query": "什么是配置中心？",
+      "expected_sources": [
+        "data/docs/config-center.md"
+      ],
+      "expected_keywords": [
+        "统一管理",
+        "超时时间",
+        "功能开关"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/config-center.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "config-center#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-4",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-2"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 96.0,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_002",
+      "query": "配置变更不生效通常有哪些原因？",
+      "expected_sources": [
+        "data/docs/config-center.md"
+      ],
+      "expected_keywords": [
+        "缓存未刷新",
+        "热更新监听失败",
+        "旧版本配置"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/config-center.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "config-center#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-2",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.98,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_003",
+      "query": "配置热更新前应该确认哪些风险？",
+      "expected_sources": [
+        "data/docs/config-center.md"
+      ],
+      "expected_keywords": [
+        "热更新",
+        "灰度机制",
+        "回滚"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/config-center.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "config-center#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-6",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.4,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_004",
+      "query": "dev test prod 配置环境有什么区别？",
+      "expected_sources": [
+        "data/docs/config-center.md"
+      ],
+      "expected_keywords": [
+        "dev",
+        "test",
+        "prod"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-4",
+        "order-service-faq#chunk-6"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.03,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 0.5,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_005",
+      "query": "订单接口报 500 的常见原因是什么？",
+      "expected_sources": [
+        "data/docs/order-service-faq.md"
+      ],
+      "expected_keywords": [
+        "payment-service",
+        "配置不一致",
+        "trace_id"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/order-service-faq.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "order-service-faq#chunk-2",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-3",
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.03,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.6667,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_006",
+      "query": "order-service 和 payment-service 是什么关系？",
+      "expected_sources": [
+        "data/docs/order-service-faq.md"
+      ],
+      "expected_keywords": [
+        "订单创建",
+        "支付预校验",
+        "支付状态"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/order-service-faq.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "order-service-faq#chunk-3",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-4",
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-2"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 12.55,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.6667,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_007",
+      "query": "payment.timeout 配置过短会造成什么影响？",
+      "expected_sources": [
+        "data/docs/order-service-faq.md"
+      ],
+      "expected_keywords": [
+        "payment.timeout",
+        "下游慢请求",
+        "提前判定为失败"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/order-service-faq.md",
+        "data/docs/service-logs.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "order-service-faq#chunk-4",
+        "service-logs#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-3"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.5,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_008",
+      "query": "retry_count 配置会怎样影响订单服务重试？",
+      "expected_sources": [
+        "data/docs/order-service-faq.md"
+      ],
+      "expected_keywords": [
+        "retry_count",
+        "重试次数",
+        "放大下游压力"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/order-service-faq.md",
+        "data/docs/service-logs.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "order-service-faq#chunk-5",
+        "service-logs#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-1"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.03,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_009",
+      "query": "enable_new_payment_flow 开启后有什么排障风险？",
+      "expected_sources": [
+        "data/docs/order-service-faq.md"
+      ],
+      "expected_keywords": [
+        "enable_new_payment_flow",
+        "新支付流程",
+        "回滚方案"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/order-service-faq.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/service-logs.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "order-service-faq#chunk-6",
+        "troubleshooting-guide#chunk-1",
+        "service-logs#chunk-1",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-3"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.94,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_010",
+      "query": "日志排查时 trace_id 有什么作用？",
+      "expected_sources": [
+        "data/docs/service-logs.md"
+      ],
+      "expected_keywords": [
+        "trace_id",
+        "调用链路",
+        "上下游记录"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-2",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.71,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 0.5,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_011",
+      "query": "ERROR WARN INFO 日志级别如何辅助排障？",
+      "expected_sources": [
+        "data/docs/service-logs.md"
+      ],
+      "expected_keywords": [
+        "ERROR",
+        "WARN",
+        "INFO"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/service-logs.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "service-logs#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-6",
+        "order-service-faq#chunk-2"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.64,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_012",
+      "query": "status=500 一定是当前服务 bug 吗？",
+      "expected_sources": [
+        "data/docs/service-logs.md"
+      ],
+      "expected_keywords": [
+        "status=500",
+        "下游调用失败",
+        "配置错误"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/service-logs.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "service-logs#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-2",
+        "order-service-faq#chunk-5",
+        "order-service-faq#chunk-3"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.38,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_013",
+      "query": "timeout 问题应该同时看哪些日志字段？",
+      "expected_sources": [
+        "data/docs/service-logs.md"
+      ],
+      "expected_keywords": [
+        "duration_ms",
+        "dependency",
+        "retry_count"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/service-logs.md",
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/config-center.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "service-logs#chunk-1",
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-6",
+        "config-center#chunk-1",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.06,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_014",
+      "query": "接口 500 应该按什么顺序排查？",
+      "expected_sources": [
+        "data/docs/troubleshooting-guide.md"
+      ],
+      "expected_keywords": [
+        "日志",
+        "配置",
+        "代码变更"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-2",
+        "order-service-faq#chunk-3",
+        "order-service-faq#chunk-5"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.69,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_015",
+      "query": "接口超时排查要检查 timeout 配置和下游耗时吗？",
+      "expected_sources": [
+        "data/docs/troubleshooting-guide.md"
+      ],
+      "expected_keywords": [
+        "接口超时",
+        "timeout 配置",
+        "下游调用耗时"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-4",
+        "order-service-faq#chunk-2"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.85,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_016",
+      "query": "配置不一致排查要对比哪些关键配置？",
+      "expected_sources": [
+        "data/docs/config-center.md",
+        "data/docs/troubleshooting-guide.md"
+      ],
+      "expected_keywords": [
+        "payment.timeout",
+        "order.retry_count",
+        "feature.enable_new_payment_flow"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/config-center.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "order-service-faq#chunk-2",
+        "config-center#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 20.27,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.6667,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    },
+    {
+      "id": "rag_017",
+      "query": "最近代码变更排查应该重点看哪些内容？",
+      "expected_sources": [
+        "data/docs/troubleshooting-guide.md"
+      ],
+      "expected_keywords": [
+        "异常处理",
+        "支付流程",
+        "重试策略"
+      ],
+      "expected_doc_type": "markdown_doc",
+      "expected_grounding_status": "grounded",
+      "retrieved_sources": [
+        "data/docs/troubleshooting-guide.md",
+        "data/docs/config-center.md",
+        "data/docs/service-logs.md",
+        "data/docs/order-service-faq.md",
+        "data/docs/order-service-faq.md"
+      ],
+      "retrieved_chunks": [
+        "troubleshooting-guide#chunk-1",
+        "config-center#chunk-1",
+        "service-logs#chunk-1",
+        "order-service-faq#chunk-2",
+        "order-service-faq#chunk-4"
+      ],
+      "retrieved_doc_types": [
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc",
+        "markdown_doc"
+      ],
+      "grounding_status": "grounded",
+      "latency_ms": 19.31,
+      "checks": {
+        "recall_at_3": true,
+        "recall_at_5": true,
+        "precision_at_3": 0.3333,
+        "mrr": 1.0,
+        "keywords_ok": true,
+        "doc_type_ok": true,
+        "grounding_ok": true
+      },
+      "passed": true
+    }
+  ]
+}

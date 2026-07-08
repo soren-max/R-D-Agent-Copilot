@@ -1,0 +1,478 @@
+{
+  "metrics": {
+    "total_cases": 12,
+    "route_accuracy": 0.9167,
+    "tool_selection_accuracy": 0.9167,
+    "step_coverage": 0.9375,
+    "missing_tool_cases": [
+      {
+        "id": "plan_012",
+        "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+        "expected_route": "complex_troubleshooting",
+        "actual_route": "simple_qa",
+        "actual_intent": "knowledge_qa",
+        "route_reason": "检测到程序类问句模式「怎么排查？」，判定为简单问答。",
+        "expected_tools": [
+          "log_tool",
+          "config_tool",
+          "git_tool",
+          "rag_retriever"
+        ],
+        "actual_tools": [
+          "rag_retriever"
+        ],
+        "missing_tools": [
+          "log_tool",
+          "config_tool",
+          "git_tool"
+        ],
+        "extra_tools": [],
+        "expected_step_keywords": [
+          "query_logs",
+          "check_config",
+          "analyze_git_diff",
+          "retrieve_knowledge"
+        ],
+        "covered_step_keywords": [
+          "retrieve_knowledge"
+        ],
+        "step_coverage": 0.25,
+        "route_ok": false,
+        "tools_ok": false,
+        "passed": false
+      }
+    ],
+    "bad_cases": [
+      {
+        "id": "plan_012",
+        "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+        "expected_route": "complex_troubleshooting",
+        "actual_route": "simple_qa",
+        "actual_intent": "knowledge_qa",
+        "route_reason": "检测到程序类问句模式「怎么排查？」，判定为简单问答。",
+        "expected_tools": [
+          "log_tool",
+          "config_tool",
+          "git_tool",
+          "rag_retriever"
+        ],
+        "actual_tools": [
+          "rag_retriever"
+        ],
+        "missing_tools": [
+          "log_tool",
+          "config_tool",
+          "git_tool"
+        ],
+        "extra_tools": [],
+        "expected_step_keywords": [
+          "query_logs",
+          "check_config",
+          "analyze_git_diff",
+          "retrieve_knowledge"
+        ],
+        "covered_step_keywords": [
+          "retrieve_knowledge"
+        ],
+        "step_coverage": 0.25,
+        "route_ok": false,
+        "tools_ok": false,
+        "passed": false
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "plan_001",
+      "query": "什么是配置中心？",
+      "expected_route": "simple_qa",
+      "actual_route": "simple_qa",
+      "actual_intent": "knowledge_qa",
+      "route_reason": "检测到定义类问句模式「什么是配置中心？」，判定为简单问答。",
+      "expected_tools": [
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "covered_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_002",
+      "query": "解释一下 trace_id 在日志排查中的作用",
+      "expected_route": "simple_qa",
+      "actual_route": "simple_qa",
+      "actual_intent": "knowledge_qa",
+      "route_reason": "检测到定义类问句模式「解释一下 trace_id 在日志排查中的作用」，判定为简单问答。",
+      "expected_tools": [
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "covered_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_003",
+      "query": "order-service 和 payment-service 是什么关系？",
+      "expected_route": "simple_qa",
+      "actual_route": "simple_qa",
+      "actual_intent": "knowledge_qa",
+      "route_reason": "未检测到排障关键词，默认判定为简单问答。",
+      "expected_tools": [
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "covered_step_keywords": [
+        "retrieve_knowledge",
+        "知识库"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_004",
+      "query": "payment.timeout 配置有什么影响？",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "config_diff",
+      "route_reason": "检测到排障关键词 [timeout、配置]，判定为复杂排障问题。",
+      "expected_tools": [
+        "config_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "config_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "check_config",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "check_config",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_005",
+      "query": "线上接口超时，duration_ms 很高，应该检查什么？",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "log_analysis",
+      "route_reason": "检测到排障关键词 [超时、检查]，判定为复杂排障问题。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_006",
+      "query": "配置改了但没有生效，帮我排查原因",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "config_diff",
+      "route_reason": "检测到排障关键词 [排查、原因、配置]，判定为复杂排障问题。",
+      "expected_tools": [
+        "config_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "config_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "check_config",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "check_config",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_007",
+      "query": "新支付流程 enable_new_payment_flow 开启后订单失败，分析最近代码变更",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "git_change",
+      "route_reason": "检测到排障关键词 [失败、分析、变更]，判定为复杂排障问题。",
+      "expected_tools": [
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_008",
+      "query": "服务发布后启动失败，health check 不通过",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "deployment_issue",
+      "route_reason": "检测到排障关键词 [失败、发布、启动失败、health check]，判定为复杂排障问题。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_009",
+      "query": "端口被占用导致服务起不来，怎么定位？",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "deployment_issue",
+      "route_reason": "检测到排障关键词 [起不来、端口]，判定为复杂排障问题。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_010",
+      "query": "Git 最近提交可能导致订单异常，帮我分析",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "git_change",
+      "route_reason": "检测到排障关键词 [异常、分析、git]，判定为复杂排障问题。",
+      "expected_tools": [
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_011",
+      "query": "订单接口返回 500，日志里有 payment-service timeout，分析原因",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "complex_troubleshooting",
+      "actual_intent": "log_analysis",
+      "route_reason": "检测到排障关键词 [timeout、500、分析、原因]，判定为复杂排障问题。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "missing_tools": [],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 1.0,
+      "route_ok": true,
+      "tools_ok": true,
+      "passed": true
+    },
+    {
+      "id": "plan_012",
+      "query": "为什么订单接口报500？配置改了但没有生效，应该怎么排查？",
+      "expected_route": "complex_troubleshooting",
+      "actual_route": "simple_qa",
+      "actual_intent": "knowledge_qa",
+      "route_reason": "检测到程序类问句模式「怎么排查？」，判定为简单问答。",
+      "expected_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool",
+        "rag_retriever"
+      ],
+      "actual_tools": [
+        "rag_retriever"
+      ],
+      "missing_tools": [
+        "log_tool",
+        "config_tool",
+        "git_tool"
+      ],
+      "extra_tools": [],
+      "expected_step_keywords": [
+        "query_logs",
+        "check_config",
+        "analyze_git_diff",
+        "retrieve_knowledge"
+      ],
+      "covered_step_keywords": [
+        "retrieve_knowledge"
+      ],
+      "step_coverage": 0.25,
+      "route_ok": false,
+      "tools_ok": false,
+      "passed": false
+    }
+  ]
+}
