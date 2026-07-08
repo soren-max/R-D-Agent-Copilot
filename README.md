@@ -96,6 +96,8 @@ flowchart LR
 
 更多架构说明见 [docs/architecture.md](docs/architecture.md)。
 模块边界说明见 [docs/module-boundaries.md](docs/module-boundaries.md)。
+Adapter 边界说明见 [docs/adapter-boundary.md](docs/adapter-boundary.md)。
+Safety 边界说明见 [docs/safety-boundary.md](docs/safety-boundary.md)。
 
 ## Agent Harness vs 普通 RAG
 
@@ -222,6 +224,7 @@ Router、Planner 和 Tool Selection 是控制面，必须保持 deterministic：
 - Router 只根据规则和关键词评分输出 `simple_qa` / `complex_troubleshooting` 及细分 intent。
 - Planner 只根据 Router 输出生成固定模板 plan，并且工具只能来自 `log_tool`、`config_tool`、`git_tool`、`rag_retriever` 白名单。
 - Tool Selection 由 Planner 的 deterministic plan 和 Tool Gateway allowlist 共同约束，LLM 不能新增工具、改写步骤或绕过 Executor。
+- Safety Guard 对 prompt injection、未知工具、非法 tool input 和危险 action 做本地 rule-based 拦截，拦截结果写入 trace。
 - `app/prompts/answer_synthesizer_prompt.txt` 约束最终回答只能基于 Tools 和 RAG evidence，证据不足时必须说明当前证据不足。
 - `app/prompts/log_analysis_prompt.txt`、`config_diff_prompt.txt`、`git_change_prompt.txt` 为后续工具内证据分析预留领域 prompt。
 
