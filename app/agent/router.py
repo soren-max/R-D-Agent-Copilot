@@ -15,22 +15,39 @@ from app.core.models import RouterResult
 
 _TROUBLESHOOTING_KEYWORDS: Final[list[tuple[str, float]]] = [
     ("报错", 3.0), ("异常", 2.5), ("错误", 2.0), ("失败", 2.0),
-    ("超时", 2.5), ("崩溃", 3.0), ("挂掉", 3.0), ("挂", 1.5),
+    ("超时", 2.5), ("崩溃", 3.0), ("挂掉", 3.0), ("挂了", 3.0), ("挂", 1.5),
     ("error", 3.0), ("exception", 3.0), ("crash", 3.0),
     ("timeout", 2.5), ("oom", 3.0),
     ("500", 2.5), ("502", 2.5), ("503", 2.5),
-    ("排查", 2.5), ("查一下", 1.5), ("检查", 1.5), ("分析", 1.5),
+    ("排查", 2.5), ("定位", 2.0), ("看日志", 2.0), ("查配置", 2.0),
+    ("查一下", 1.5), ("检查", 1.5), ("分析", 1.5),
     ("怎么回事", 2.0), ("什么原因", 2.0), ("为什么", 1.5),
     ("根因", 2.5), ("原因", 1.0), ("debug", 2.0), ("investigate", 2.0),
-    ("不生效", 2.5), ("没生效", 2.5), ("变慢", 2.5), ("卡住", 2.5),
+    ("不生效", 2.5), ("没生效", 2.5), ("没有生效", 2.5), ("变慢", 2.5), ("卡住", 2.5),
     ("不能用", 2.0), ("打不开", 2.0), ("连不上", 2.5), ("跑不动", 2.5),
     ("slow", 2.0), ("broken", 2.5), ("leak", 2.5), ("corrupt", 2.5),
-    ("配置", 1.0), ("回滚", 2.0), ("升级后", 2.0), ("变更", 2.0), ("commit", 2.0), ("git", 2.0),
+    ("配置", 1.0), ("配置改了", 2.0), ("回滚", 2.0), ("升级后", 2.0),
+    ("变更", 2.0), ("最近改动", 2.0), ("commit", 2.0), ("git", 2.0),
     ("部署", 2.5), ("发布", 2.0), ("启动失败", 3.0), ("起不来", 3.0),
-    ("端口", 2.0), ("health check", 2.5), ("port already in use", 3.0),
+    ("接口报错", 3.0), ("服务异常", 3.0), ("端口", 2.0), ("health check", 2.5), ("port already in use", 3.0),
     ("注入", 2.5), ("越权", 2.5), ("泄露", 2.5), ("删除数据", 3.0), ("删库", 3.0),
     ("绕过", 2.5), ("密钥", 2.5), ("prompt injection", 3.0),
 ]
+
+_FAULT_SIGNAL_KEYWORDS: Final[tuple[str, ...]] = (
+    "500", "502", "503", "error", "exception", "timeout",
+    "超时", "报错", "异常", "失败", "挂了", "挂掉", "不生效", "没生效", "没有生效",
+)
+
+_DEBUG_INTENT_KEYWORDS: Final[tuple[str, ...]] = (
+    "怎么排查", "怎样排查", "为什么", "定位", "看日志", "查配置",
+    "配置改了", "git 变更", "最近改动", "回滚", "接口报错", "服务异常",
+)
+
+_TROUBLESHOOTING_OBJECT_KEYWORDS: Final[tuple[str, ...]] = (
+    "订单", "接口", "服务", "配置", "日志", "ci", "github actions",
+    "payment-service", "order-service", "构建", "部署",
+)
 
 _QA_DEFINITION_PATTERNS: Final[list[str]] = [
     r"什么是.{,30}", r".{0,30}是什么意思", r"能解释一下.{,30}",
@@ -67,6 +84,16 @@ class IntentRouter:
         text_lower = message.lower().strip()
         if not text_lower:
             return RouterResult(type="simple_qa", intent="knowledge_qa", confidence=0.0, reason="输入为空，默认分类为简单问答。")
+
+        combo_matches = _troubleshooting_combo_matches(text_lower)
+        if combo_matches:
+            matched_str = "、".join(combo_matches[:8])
+            return RouterResult(
+                type="complex_troubleshooting",
+                intent=_infer_troubleshooting_intent(text_lower),
+                confidence=0.90,
+                reason=f"检测到故障信号与排查意图组合 [{matched_str}]，判定为复杂排障问题。",
+            )
 
         # Layer 1: QA 定义模式
         for pattern in _QA_DEFINITION_PATTERNS:
@@ -110,10 +137,21 @@ class IntentRouter:
         return RouterResult(type="simple_qa", intent="knowledge_qa", confidence=0.40, reason="未检测到排障关键词，默认判定为简单问答。")
 
 
+def _troubleshooting_combo_matches(text_lower: str) -> list[str]:
+    fault_matches = [keyword for keyword in _FAULT_SIGNAL_KEYWORDS if keyword in text_lower]
+    intent_matches = [keyword for keyword in _DEBUG_INTENT_KEYWORDS if keyword in text_lower]
+    object_matches = [keyword for keyword in _TROUBLESHOOTING_OBJECT_KEYWORDS if keyword in text_lower]
+    if fault_matches and intent_matches:
+        return object_matches[:3] + fault_matches[:3] + intent_matches[:3]
+    if object_matches and fault_matches and any(keyword in text_lower for keyword in ("排查", "日志", "配置", "定位")):
+        return object_matches[:3] + fault_matches[:3]
+    return []
+
+
 def _infer_troubleshooting_intent(text_lower: str) -> str:
     if any(keyword in text_lower for keyword in ["注入", "越权", "泄露", "删库", "删除数据", "绕过", "prompt injection"]):
         return "safety_risk"
-    if any(keyword in text_lower for keyword in ["配置", "config", "不生效", "没生效"]):
+    if any(keyword in text_lower for keyword in ["配置", "config", "不生效", "没生效", "没有生效"]):
         return "config_diff"
     if any(keyword in text_lower for keyword in ["git", "commit", "提交", "代码", "变更"]) and "日志" not in text_lower:
         return "git_change"
