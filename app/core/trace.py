@@ -136,6 +136,9 @@ class Tracer:
             safety_reasons=(safety or {}).get("reasons", []),
             blocked_tools=(safety or {}).get("blocked_tools", []),
             filtered_kb_sources=(safety or {}).get("filtered_kb_sources", []),
+            blocked=(safety or {}).get("blocked", False),
+            blocked_reason=(safety or {}).get("reason", ""),
+            input_summary=(safety or {}).get("input_summary", ""),
             memory_created=memory_created,
             memory_id=memory_id,
             checkpoint_created=checkpoint_created,
@@ -147,9 +150,12 @@ class Tracer:
         ))
 
     def end_safety_stage(self, safety: dict[str, Any]) -> None:
+        status = safety.get("safety_status", "blocked" if safety.get("blocked") else "allowed")
+        risk_level = safety.get("risk_level", "high" if safety.get("blocked") else "low")
+        reason = safety.get("reason", "")
         self.end_stage(
             "safety",
-            output=f"status={safety.get('safety_status', 'allowed')}, risk={safety.get('risk_level', 'low')}",
+            output=f"status={status}, risk={risk_level}, blocked_reason={reason}",
             engine="rule_based",
             safety=safety,
         )
