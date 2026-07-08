@@ -1,0 +1,12 @@
+{
+  "id": "simple_qa",
+  "name": "Simple QA - Config Center",
+  "query": "什么是配置中心？",
+  "expected_route": "simple_qa",
+  "expected_tools": ["rag_retriever"],
+  "expected_skipped_nodes": ["log_tool", "config_tool", "git_tool"],
+  "expected_rag_sources": ["data/docs/config-center.md"],
+  "expected_grounding_status": "grounded",
+  "expected_evidence_keywords": ["配置中心", "配置项"],
+  "demo_notes": "面试演示时强调这是 simple_qa 路径：Router 进入知识问答，Planner 只规划 RAG，LangGraph 中日志、配置和 Git 节点会被跳过。"
+}

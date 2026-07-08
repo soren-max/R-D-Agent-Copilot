@@ -257,6 +257,29 @@ DeepSeek 默认关闭。没有 API Key、网络异常或模型调用失败时，
 
 前端会优先展示实时执行流；如果 SSE 失败，会提示“流式执行失败，已切换为普通请求。”并 fallback 到 `/chat`。
 
+## Benchmark and Demo Cases
+
+本项目提供固定演示 Case 和本地 benchmark 脚本，用于证明 Agent Harness 可以被重复运行和复盘。指标只代表本地演示环境，不代表生产性能、线上 QPS 或 SLA。
+
+先启动后端：
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+运行 benchmark：
+
+```bash
+python scripts/benchmark_chat.py --runs 3
+```
+
+默认输出：
+
+- `data/reports/benchmark_result.json`
+- `data/reports/benchmark_report.md`
+
+标准演示 Case 位于 `data/demo_cases/`，覆盖简单知识问答、订单 500 复杂排障和证据不足 fallback。详细讲解见 [docs/demo-cases.md](docs/demo-cases.md)。
+
 ## RAG Pipeline
 
 RAG 读取 `data/docs` 下的本地知识文件，默认样例以 Markdown 为主；v2 也支持 normal/config/log/code 文件类型。系统通过文档结构、段落、行窗口和代码符号边界生成 chunk，并为每个 chunk 保留 `source`、`title`、`section`、`chunk_id`、`doc_type`、`line_range`、`content_hash` 和 `updated_at` metadata。检索层提供 deterministic local vector search、keyword fallback 和 hybrid retrieval，不调用外部向量库、embedding 服务或企业 API。

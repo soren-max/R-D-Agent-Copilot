@@ -1,0 +1,12 @@
+{
+  "id": "insufficient_evidence",
+  "name": "Insufficient Evidence / Grounding Fallback",
+  "query": "项目里没有覆盖的某个未知系统故障应该怎么处理？",
+  "expected_route": "complex_troubleshooting",
+  "expected_tools": ["log_tool", "config_tool", "git_tool", "rag_retriever"],
+  "expected_skipped_nodes": [],
+  "expected_rag_sources": [],
+  "expected_grounding_status": "insufficient_evidence",
+  "expected_evidence_keywords": ["证据不足", "补充日志", "补充配置"],
+  "demo_notes": "面试演示时强调边界：当本地知识库和工具样例不足以支撑结论时，系统应显示 insufficient_evidence 或 fallback，而不是编造根因。"
+}
